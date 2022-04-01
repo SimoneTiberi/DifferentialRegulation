@@ -1,0 +1,150 @@
+---
+title: "DifferentialRegulation: a method to identify genes displaying differential regulation between groups of samples"
+author:
+- name: Simone Tiberi
+  affiliation:
+  - &IMLS Institute for Molecular Life Sciences, University of Zurich, Switzerland
+  - &SIB SIB Swiss Institute of Bioinformatics, University of Zurich, Switzerland
+  email: simone.tiberi@uzh.ch
+package: "`r BiocStyle::pkg_ver('DifferentialRegulation')`"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+bibliography: References.bib
+vignette: >
+  %\VignetteIndexEntry{DifferentialRegulation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+---
+```{r setup, echo=FALSE, results="hide"}
+knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
+                      dev="png",
+                      message=TRUE, error=FALSE, warning=TRUE)
+```
+
+# Introduction
+*DifferentialRegulation* is ...
+
+To access the R code used in the vignettes, type:
+```{r vignettes, eval=FALSE} 
+#browseVignettes("DifferentialRegulation")
+```
+
+
+Questions relative to *DifferentialRegulation* should be reported as a new issue at *[BugReports](https://github.com/SimoneTiberi/DifferentialRegulation/issues)*.
+
+To cite *DifferentialRegulation*, type:
+```{r citation} 
+#citation("DifferentialRegulation")
+```
+
+
+## Bioconductor installation
+`DifferentialRegulation` is available on [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/DifferentialRegulation.html) and can be installed with the command:
+```{r Bioconductor_installation, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  install.packages("BiocManager")
+#BiocManager::install("DifferentialRegulation")
+```
+
+## Alignment and quantification with alevin-fry
+...
+...
+
+# Pipeline
+Load *DifferentialRegulation*
+```{r load, message=FALSE}
+#library(DifferentialRegulation)
+```
+
+## Load the data
+Specify the directory of the data (internal in the package).
+```{r specify_data-dir}
+#data_dir = system.file("extdata", package = "DifferentialRegulation")
+```
+
+...
+...
+
+Specify the directory of the transcript level estimated counts.
+```{r specify_directories}
+#sample_names = paste0("sample", seq_len(4))
+#quant_files = file.path(data_dir, "STAR-salmon", sample_names, "quant.sf")
+#file.exists(quant_files)
+```
+
+Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry* with USA mode (TODO: CHECK NAME!), in a *SingleCellExperiment*.
+By default, counts (stored in assays(sce)$counts) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
+```{r load_USA_counts}
+#library(SingleCellExperiment)
+#sce = load_USA(path_to_counts = quant_files,
+#               path_to_cell_id = ,
+#               path_to_gene_id = ,
+#               sample_ids = ,
+#               n_cores = )
+#sce
+```
+
+## Quality control, filtering and cell clustering
+We perform basic quality control and filtering of i) lowly abundant genes, and ii) low quality cells.
+```{r QC_and_filtering}
+#
+```
+
+We assign a cell-type, via *SingleR*.
+
+## Load equivalence classes
+Load the equivalence classes and respective counts.
+```{r load_EC_counts}
+#EC = load_EC(path_to_EC_counts = quant_files,
+#             path_to_EC = ,
+#             path_to_cell_id = ,
+#             path_to_gene_id = ,
+#             sample_ids = ,
+#             n_cores = )
+#str(EC)
+```
+
+We define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
+```{r samples_design}
+#samples_design = data.frame(sample = sample_names,
+#                            group = c("A", "A", "B", "B"))
+#samples_design
+```
+
+The groups are defined in:
+```{r groups}
+#levels(samples_design$group)
+```
+
+## Differential regulation testing
+...
+```{r test}
+#set.seed(169612)
+#results = DifferentialRegulation(sce = sce,
+#                                 EC_list = EC,
+#                                 samples_design =  samples_design,
+#                                 sample_col_name = "sample",
+#                                 group_col_name = "group",
+#                                 sce_cluster_name = "cell_type",
+#                                 min_cells_per_cluster = 100, 
+#                                 min_counts_per_gene_per_group = 20,
+#                                 n_cores = NULL, # by default = n_clusters
+#                                 N_MCMC = 2000,
+#                                 burn_in = 500)
+```
+
+...
+
+```{r visualize_results}
+#head(results)
+```
+
+# Session info
+```{r sessionInfo}
+#sessionInfo()
+```
+
+# References

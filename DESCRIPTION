@@ -1,0 +1,26 @@
+Package: DifferentialRegulation
+Type: Package
+Title: Differentially regulated genes from scRNA-seq data
+Version: 0.99.0
+Author: Simone Tiberi [aut, cre]
+Maintainer: Simone Tiberi <simone.tiberi@uzh.ch>
+Description: DifferentialRegulation is a method for detecting differentially regulated genes between two groups of samples 
+  (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced and unspliced mRNA abundances, 
+  obtained from single-cell RNA-sequencing (scRNA-seq) data.
+  DifferentialRegulation accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
+  For reads compatible with multiple genes (or )
+  Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs).
+biocViews: DifferentialSplicing, AlternativeSplicing, Bayesian, Genetics,
+  RNASeq, Sequencing, DifferentialExpression, GeneExpression, MultipleComparison,
+  Software, Transcription, StatisticalMethod, Visualization
+License: GPL (>= 3)
+Depends: R (>= 3.6.0)
+Imports: Rcpp, doRNG, MASS, data.table, doParallel, parallel, foreach, stats
+LinkingTo: Rcpp, RcppArmadillo
+Suggests: knitr, rmarkdown, testthat, BiocStyle
+SystemRequirements: C++11
+VignetteBuilder: knitr
+RoxygenNote: 7.1.1
+ByteCompile: true
+URL: https://github.com/SimoneTiberi/DifferentialRegulation
+BugReports: https://github.com/SimoneTiberi/DifferentialRegulation/issues
