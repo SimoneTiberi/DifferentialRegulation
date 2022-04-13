@@ -6,7 +6,7 @@ prepare_PB_counts = function(one_cluster_ids_kept, sce, clusters, n_samples,
   
   # compute pseudo-bulk SUA counts for each sample:
   S = U = A = matrix(0, nrow = nrow(sce), ncol = n_samples)
-  for(i in 1:n_samples){
+  for(i in seq_len(n_samples)){
     sel_cells = sce$sample_id == levels(sce$sample_id)[i]
     sce_one_sample = sce[, sel_cells]
     S[,i] = rowSums(assays(sce_one_sample)$spliced)
@@ -46,7 +46,7 @@ compute_pval_FULL = function(A, B, K = 3, N){
   
   CV     = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
   mode   = apply(gamma, 2, find.mode, adjust = 10)
-
+  
   p = K-1
   
   p_value = vapply(seq_len(K), function(k){

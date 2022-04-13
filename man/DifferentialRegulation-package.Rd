@@ -1,6 +1,5 @@
 \name{DifferentialRegulation-package}
 \alias{DifferentialRegulation-package}
-\alias{DifferentialRegulation}
 \docType{package}
 \title{
 \packageTitle{DifferentialRegulation}
@@ -19,7 +18,6 @@ To access the vignettes, type: \code{browseVignettes("DifferentialRegulation")}.
 \packageIndices{DifferentialRegulation}
 }
 \author{
-\packageAuthor{DifferentialRegulation}
-Maintainer: \packageMaintainer{DifferentialRegulation}
+Simone Tiberi \email{simone.tiberi@uzh.ch}
 }
 \keyword{ package }

@@ -16,8 +16,31 @@
 #' @return A \code{list} object.
 #' 
 #' @examples
-#' TODO
+#' # load internal data to the package:
+#' data_dir = system.file("extdata", package = "DifferentialRegulation")
 #' 
+#' # specify 4 samples ids:
+#' sample_ids = paste0("sample_", seq_len(4))
+#' # set directories of each sample input data (obtained via alevin-fry):
+#' base_dir = file.path(data_dir, "alevin-fry", sample_ids)
+#' file.exists(base_dir)
+#' 
+#' # set paths to USA counts, cell id, gene id, EC counts and ECs:
+#' # Note that alevin-fry needs to be run with `--use-mtx` option
+#' # to store counts in a `quants_mat.mtx` file.
+#' path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
+#' path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
+#' path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
+#' path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+#' path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+#' 
+#' # load EC counts:
+#' EC_list = load_EC(path_to_EC_counts,
+#'                   path_to_EC,
+#'                   path_to_cell_id,
+#'                   path_to_gene_id,
+#'                   sample_ids)
+#'
 #' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
 #' 
 #' @seealso \code{\link{load_USA}}, \code{\link{DifferentialRegulation}}
@@ -28,18 +51,23 @@ load_EC = function(path_to_EC_counts,
                    path_to_cell_id,
                    path_to_gene_id,
                    sample_ids){
+  
   n_samples = length(sample_ids)
   
-  if( n_samples != length(path_to_counts) ){
-    message("sample_ids, path_to_counts, path_to_cell_id and path_to_gene_id must have the same length")
+  if( n_samples != length(path_to_EC_counts) ){
+    message("sample_ids, path_to_EC_counts, path_to_EC, path_to_cell_id and path_to_gene_id must have the same length")
+    return(NULL)
+  }
+  if( n_samples != length(path_to_EC) ){
+    message("sample_ids, path_to_EC_counts, path_to_EC, path_to_cell_id and path_to_gene_id must have the same length")
     return(NULL)
   }
   if( n_samples != length(path_to_cell_id) ){
-    message("sample_ids, path_to_counts, path_to_cell_id and path_to_gene_id must have the same length")
+    message("sample_ids, path_to_EC_counts, path_to_EC, path_to_cell_id and path_to_gene_id must have the same length")
     return(NULL)
   }
   if( n_samples != length(path_to_gene_id) ){
-    message("sample_ids, path_to_counts, path_to_cell_id and path_to_gene_id must have the same length")
+    message("sample_ids, path_to_EC_counts, path_to_EC, path_to_cell_id and path_to_gene_id must have the same length")
     return(NULL)
   }
   
@@ -70,34 +98,34 @@ load_EC = function(path_to_EC_counts,
     
     # load gene EC:
     EC_genes = fread(path_to_EC[[i]],
-                     sep = " ", quote = "", header = FALSE)
+                     sep = " ", quote = "", header = FALSE)[[1]]
     
     # gene_id names (corresponding to ids in EC_genes)
-    gene_id = fread(paste0(sample_ids[i],"/alevin/quants_mat_cols.txt"), sep = " ", 
-                    quote = "", header = FALSE)
+    gene_id = fread(path_to_gene_id[[i]], sep = " ", 
+                    quote = "", header = FALSE)[[1]]
     
-    n_genes = length(gene_id$V1)/3
+    n_genes = length(gene_id)/3
     gene_id_list[[i]] = gene_id
     
     EC_USA_type = c( rep("S", n_genes),  rep("U", n_genes), rep("A", n_genes) )
     
     # NOW GENE names are 3 * longer!!!
     # transform genes ids from 1...3*n_genes to 1...n_genes.
-    transform_ids = as.integer(rep( 0:(n_genes-1), 3))
+    transform_ids = as.integer(rep( seq_len(n_genes)-1, 3))
     
-    n_EC  = length(EC_genes$V1)-2
+    n_EC  = length(EC_genes)-2
     # load EC info:
-    X = EC_genes$V1[3:(n_EC+2)] # vector with all transcript ids
+    X = EC_genes[2 + seq_len(n_EC)] # vector with all transcript ids
     # split info separated by "\t":
     X = strsplit(X,"\t",fixed=TRUE)
     # turn character ids into numeric:
     X = lapply(X, as.integer)
     
-    EC_id = 1 + sapply(X, function(x){
+    EC_id = 1 + vapply(X, function(x){
       x[length(x)]
-    }) # corresponds to rows in EC 
+    }, FUN.VALUE = integer(1)) # corresponds to rows in EC 
     
-    EC_gene_id = sapply(X, function(x){
+    EC_gene_id = lapply(X, function(x){
       x[-length(x)] # transform gene ids -> from 1...3*n_genes to 1...n_genes.
     }) # gene ids as in "gene_id" file.
     rm(X)
@@ -108,10 +136,10 @@ load_EC = function(path_to_EC_counts,
     })
     
     # transform gene ids -> from 1...3*n_genes to 1...n_genes. 
-    EC_gene_id = sapply(EC_gene_id, function(x){
+    EC_gene_id = lapply(EC_gene_id, function(x){
       transform_ids[x + 1] # transform gene ids -> from 1...3*n_genes to 1...n_genes.
     }) # gene ids as in "gene_id" file.
-    n_distinct_genes_per_EC = sapply(EC_gene_id, length)
+    n_distinct_genes_per_EC = vapply(EC_gene_id, length, FUN.VALUE = integer(1))
     
     # turn character ids into numeric:
     EC_USA_type = lapply(EC_USA_type, function(x)
@@ -131,7 +159,7 @@ load_EC = function(path_to_EC_counts,
   
   # check gene_id is the same across samples!
   if(n_samples > 1.5){
-    cond = sapply(gene_id_list[2:n_samples], function(x) all(gene_id_list[[1]] == x))
+    cond = vapply(gene_id_list[seq.int(2, n_samples, by = 1)], function(x) all(gene_id_list[[1]] == x), FUN.VALUE = logical(1) )
     if(!all(cond) ){
       message("gene ids contained in path_to_gene_id are not the same; maybe samples were not aligned and quantifies with the same reference transcriprome?")
       return(NULL)

@@ -29,7 +29,7 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
 
 To access the R code used in the vignettes, type:
 ```{r vignettes, eval=FALSE} 
-#browseVignettes("DifferentialRegulation")
+browseVignettes("DifferentialRegulation")
 ```
 
 
@@ -37,7 +37,7 @@ Questions relative to *DifferentialRegulation* should be reported as a new issue
 
 To cite *DifferentialRegulation*, type:
 ```{r citation} 
-#citation("DifferentialRegulation")
+citation("DifferentialRegulation")
 ```
 
 
@@ -46,105 +46,142 @@ To cite *DifferentialRegulation*, type:
 ```{r Bioconductor_installation, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly=TRUE))
   install.packages("BiocManager")
-#BiocManager::install("DifferentialRegulation")
+BiocManager::install("DifferentialRegulation")
 ```
 
 ## Alignment and quantification with alevin-fry
-...
-...
+*DifferentialRegulation* inputs scRNA-seq data, aligned via *alevin-fry* [@alevin-fry].
+
+NOTE: when using *alevin-fry*, set options `--d` (or `--dump-eqclasses`), to obtain the equivalence classes, and `--use-mtx`, to store counts in a `quants_mat.mtx` file (as expected by our `load_USA` function).
+
+We also recommend using the `--CR-like-EM` option, which also allows equivalence classes of reads that map to multiple genes.
 
 # Pipeline
 Load *DifferentialRegulation*
 ```{r load, message=FALSE}
-#library(DifferentialRegulation)
+library(DifferentialRegulation)
 ```
 
 ## Load the data
 Specify the directory of the data (internal in the package).
 ```{r specify_data-dir}
-#data_dir = system.file("extdata", package = "DifferentialRegulation")
+data_dir = system.file("extdata", package = "DifferentialRegulation")
 ```
 
-...
-...
-
-Specify the directory of the transcript level estimated counts.
+Specify the directory of the USA (unspliced, spliced and ambiguous) estimated counts, inferred via *alevin-fry*.
 ```{r specify_directories}
-#sample_names = paste0("sample", seq_len(4))
-#quant_files = file.path(data_dir, "STAR-salmon", sample_names, "quant.sf")
-#file.exists(quant_files)
+# specify 4 samples ids:
+sample_ids = paste0("sample_", seq_len(4))
+# set directories of each sample input data (obtained via alevin-fry):
+base_dir = file.path(data_dir, "alevin-fry", sample_ids)
+
+# Note that alevin-fry needs to be run with `--use-mtx` option to store counts in a `quants_mat.mtx` file.
+path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
+path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
+path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
 ```
 
-Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry* with USA mode (TODO: CHECK NAME!), in a *SingleCellExperiment*.
+### Load USA counts
+Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry*, in a *SingleCellExperiment*.
 By default, counts (stored in assays(sce)$counts) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
 ```{r load_USA_counts}
-#library(SingleCellExperiment)
-#sce = load_USA(path_to_counts = quant_files,
-#               path_to_cell_id = ,
-#               path_to_gene_id = ,
-#               sample_ids = ,
-#               n_cores = )
-#sce
+sce = load_USA(path_to_counts,
+               path_to_cell_id,
+               path_to_gene_id,
+               sample_ids)
 ```
 
-## Quality control, filtering and cell clustering
-We perform basic quality control and filtering of i) lowly abundant genes, and ii) low quality cells.
-```{r QC_and_filtering}
-#
+Store cell-cluster or cell-type information.
+In our toy example data, all cells are Hepatocytes.
+```{r cell-type}
+sce$cell_type = "Hepatocytes"
 ```
 
-We assign a cell-type, via *SingleR*.
+Here, we assume that basic quality control and filtering of low quality cells have been performed.
 
-## Load equivalence classes
-Load the equivalence classes and respective counts.
+### Load equivalence classes (EC)
+Specify the directory of the ECs and respective counts, inferred via *alevin-fry*.
+```{r specify_directories_EC}
+path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+```
+
+Load the equivalence classes and respective counts (only needed when performing differential testing on ECs).
 ```{r load_EC_counts}
-#EC = load_EC(path_to_EC_counts = quant_files,
-#             path_to_EC = ,
-#             path_to_cell_id = ,
-#             path_to_gene_id = ,
-#             sample_ids = ,
-#             n_cores = )
-#str(EC)
+EC_list = load_EC(path_to_EC_counts,
+                  path_to_EC,
+                  path_to_cell_id,
+                  path_to_gene_id,
+                  sample_ids)
 ```
 
+## Define the design of the study
 We define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
 ```{r samples_design}
-#samples_design = data.frame(sample = sample_names,
-#                            group = c("A", "A", "B", "B"))
-#samples_design
+design = data.frame(sample = sample_ids,
+                    group = c("A", "A", "B", "B"))
+design
 ```
 
 The groups are defined in:
 ```{r groups}
-#levels(samples_design$group)
+levels(design$group)
 ```
 
-## Differential regulation testing
-...
-```{r test}
-#set.seed(169612)
-#results = DifferentialRegulation(sce = sce,
-#                                 EC_list = EC,
-#                                 samples_design =  samples_design,
-#                                 sample_col_name = "sample",
-#                                 group_col_name = "group",
-#                                 sce_cluster_name = "cell_type",
-#                                 min_cells_per_cluster = 100, 
-#                                 min_counts_per_gene_per_group = 20,
-#                                 n_cores = NULL, # by default = n_clusters
-#                                 N_MCMC = 2000,
-#                                 burn_in = 500)
+## Differential regulation testing 
+Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
+Using EC counts allows to explicitly model the uncertainty from reads that map to multiple genes.
+
+### USA testing
+```{r sce-test}
+# sce-based test:
+set.seed(169612)
+results_USA = DifferentialRegulation(sce = sce,
+                                     EC_list = NULL,
+                                     design =  design,
+                                     sample_col_name = "sample",
+                                     group_col_name = "group",
+                                     sce_cluster_name = "cell_type",
+                                     min_cells_per_cluster = 100, 
+                                     min_counts_per_gene_per_group = 20,
+                                     n_cores = NULL, # by default = n_clusters
+                                     N_MCMC = 2000,
+                                     burn_in = 500)
 ```
 
-...
+We can sort results by significance, if we want, before visualizing them.
+```{r visualize_results, eval = FALSE}
+# sort results by significance:
+results_USA = results_USA[ order(results_USA$p_val), ]
+# visualize head of results:
+head(results_USA)
+```
 
-```{r visualize_results}
-#head(results)
+### EC testing
+```{r EC-test, eval = FALSE}
+# EC-based test:
+set.seed(169612)
+results_EC = DifferentialRegulation(sce = sce,
+                                 EC_list = EC_list,
+                                 design =  design,
+                                 sample_col_name = "sample",
+                                 group_col_name = "group",
+                                 sce_cluster_name = "cell_type",
+                                 min_cells_per_cluster = 100, 
+                                 min_counts_per_gene_per_group = 20,
+                                 n_cores = NULL, # by default = n_clusters
+                                 N_MCMC = 2000,
+                                 burn_in = 500)
+
+# sort results by significance:
+results_EC = results_EC[ order(results_EC$p_val), ]
+# visualize head of results:
+head(results_EC)
 ```
 
 # Session info
 ```{r sessionInfo}
-#sessionInfo()
+sessionInfo()
 ```
 
 # References

@@ -11,9 +11,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// MCMC
-Rcpp::List MCMC(unsigned int const& n_samples, unsigned int const& n_genes, unsigned int const& n_groups, unsigned int const& n_genes_keep, Rcpp::IntegerVector const& keep_genes_id, Rcpp::IntegerVector const& numeric_groups, Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, Rcpp::IntegerVector const& n_samples_per_group, unsigned int const& N_MCMC, unsigned int const& burn_in, Rcpp::NumericMatrix& PI_gene, Rcpp::ListOf<Rcpp::NumericMatrix> PI_SU, Rcpp::ListOf<Rcpp::NumericMatrix> const& list_X_unique, Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> const& list_EC_gene_id, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericVector>> const& list_EC_SU_id, Rcpp::ListOf<Rcpp::IntegerVector> counts, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol, Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU, bool const& prior_TF, double const& mean_log_delta, double const& sd_log_delta, double const& sd_prior_non_informative);
-RcppExport SEXP _DifferentialRegulation_MCMC(SEXP n_samplesSEXP, SEXP n_genesSEXP, SEXP n_groupsSEXP, SEXP n_genes_keepSEXP, SEXP keep_genes_idSEXP, SEXP numeric_groupsSEXP, SEXP sample_ids_per_groupSEXP, SEXP n_samples_per_groupSEXP, SEXP N_MCMCSEXP, SEXP burn_inSEXP, SEXP PI_geneSEXP, SEXP PI_SUSEXP, SEXP list_X_uniqueSEXP, SEXP list_EC_gene_idSEXP, SEXP list_EC_SU_idSEXP, SEXP countsSEXP, SEXP MCMC_bar_pi_1SEXP, SEXP MCMC_bar_pi_2SEXP, SEXP MCMC_bar_pi_3SEXP, SEXP cholSEXP, SEXP delta_SUSEXP, SEXP prior_TFSEXP, SEXP mean_log_deltaSEXP, SEXP sd_log_deltaSEXP, SEXP sd_prior_non_informativeSEXP) {
+// Rcpp_MCMC
+Rcpp::List Rcpp_MCMC(unsigned int const& n_samples, unsigned int const& n_genes, unsigned int const& n_groups, unsigned int const& n_genes_keep, Rcpp::IntegerVector const& keep_genes_id, Rcpp::IntegerVector const& numeric_groups, Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, Rcpp::IntegerVector const& n_samples_per_group, unsigned int const& N_MCMC, unsigned int const& burn_in, Rcpp::NumericMatrix& PI_gene, Rcpp::ListOf<Rcpp::NumericMatrix> PI_SU, Rcpp::ListOf<Rcpp::NumericMatrix> const& list_X_unique, Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> const& list_EC_gene_id, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericVector>> const& list_EC_SU_id, Rcpp::ListOf<Rcpp::IntegerVector> counts, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol, Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU, bool const& prior_TF, double const& mean_log_delta, double const& sd_log_delta, double const& sd_prior_non_informative);
+RcppExport SEXP _DifferentialRegulation_Rcpp_MCMC(SEXP n_samplesSEXP, SEXP n_genesSEXP, SEXP n_groupsSEXP, SEXP n_genes_keepSEXP, SEXP keep_genes_idSEXP, SEXP numeric_groupsSEXP, SEXP sample_ids_per_groupSEXP, SEXP n_samples_per_groupSEXP, SEXP N_MCMCSEXP, SEXP burn_inSEXP, SEXP PI_geneSEXP, SEXP PI_SUSEXP, SEXP list_X_uniqueSEXP, SEXP list_EC_gene_idSEXP, SEXP list_EC_SU_idSEXP, SEXP countsSEXP, SEXP MCMC_bar_pi_1SEXP, SEXP MCMC_bar_pi_2SEXP, SEXP MCMC_bar_pi_3SEXP, SEXP cholSEXP, SEXP delta_SUSEXP, SEXP prior_TFSEXP, SEXP mean_log_deltaSEXP, SEXP sd_log_deltaSEXP, SEXP sd_prior_non_informativeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -42,13 +42,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double const& >::type mean_log_delta(mean_log_deltaSEXP);
     Rcpp::traits::input_parameter< double const& >::type sd_log_delta(sd_log_deltaSEXP);
     Rcpp::traits::input_parameter< double const& >::type sd_prior_non_informative(sd_prior_non_informativeSEXP);
-    rcpp_result_gen = Rcpp::wrap(MCMC(n_samples, n_genes, n_groups, n_genes_keep, keep_genes_id, numeric_groups, sample_ids_per_group, n_samples_per_group, N_MCMC, burn_in, PI_gene, PI_SU, list_X_unique, list_EC_gene_id, list_EC_SU_id, counts, MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3, chol, delta_SU, prior_TF, mean_log_delta, sd_log_delta, sd_prior_non_informative));
+    rcpp_result_gen = Rcpp::wrap(Rcpp_MCMC(n_samples, n_genes, n_groups, n_genes_keep, keep_genes_id, numeric_groups, sample_ids_per_group, n_samples_per_group, N_MCMC, burn_in, PI_gene, PI_SU, list_X_unique, list_EC_gene_id, list_EC_SU_id, counts, MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3, chol, delta_SU, prior_TF, mean_log_delta, sd_log_delta, sd_prior_non_informative));
     return rcpp_result_gen;
 END_RCPP
 }
-// MCMC_sce
-Rcpp::List MCMC_sce(unsigned int const& n_samples, unsigned int const& n_genes, unsigned int const& n_groups, Rcpp::IntegerVector const& numeric_groups, Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, Rcpp::IntegerVector const& n_samples_per_group, unsigned int const& N_MCMC, unsigned int const& burn_in, unsigned int const& thinning, Rcpp::ListOf<Rcpp::NumericMatrix>& PI_SU, Rcpp::ListOf<Rcpp::NumericMatrix> const& X_sce, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol, Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU, bool const& prior_TF, double const& mean_log_delta, double const& sd_log_delta, double const& sd_prior_non_informative);
-RcppExport SEXP _DifferentialRegulation_MCMC_sce(SEXP n_samplesSEXP, SEXP n_genesSEXP, SEXP n_groupsSEXP, SEXP numeric_groupsSEXP, SEXP sample_ids_per_groupSEXP, SEXP n_samples_per_groupSEXP, SEXP N_MCMCSEXP, SEXP burn_inSEXP, SEXP thinningSEXP, SEXP PI_SUSEXP, SEXP X_sceSEXP, SEXP MCMC_bar_pi_1SEXP, SEXP MCMC_bar_pi_2SEXP, SEXP MCMC_bar_pi_3SEXP, SEXP cholSEXP, SEXP delta_SUSEXP, SEXP prior_TFSEXP, SEXP mean_log_deltaSEXP, SEXP sd_log_deltaSEXP, SEXP sd_prior_non_informativeSEXP) {
+// Rcpp_MCMC_sce
+Rcpp::List Rcpp_MCMC_sce(unsigned int const& n_samples, unsigned int const& n_genes, unsigned int const& n_groups, Rcpp::IntegerVector const& numeric_groups, Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, Rcpp::IntegerVector const& n_samples_per_group, unsigned int const& N_MCMC, unsigned int const& burn_in, Rcpp::ListOf<Rcpp::NumericMatrix>& PI_SU, Rcpp::ListOf<Rcpp::NumericMatrix> const& X_sce, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2, Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3, Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol, Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU, bool const& prior_TF, double const& mean_log_delta, double const& sd_log_delta, double const& sd_prior_non_informative);
+RcppExport SEXP _DifferentialRegulation_Rcpp_MCMC_sce(SEXP n_samplesSEXP, SEXP n_genesSEXP, SEXP n_groupsSEXP, SEXP numeric_groupsSEXP, SEXP sample_ids_per_groupSEXP, SEXP n_samples_per_groupSEXP, SEXP N_MCMCSEXP, SEXP burn_inSEXP, SEXP PI_SUSEXP, SEXP X_sceSEXP, SEXP MCMC_bar_pi_1SEXP, SEXP MCMC_bar_pi_2SEXP, SEXP MCMC_bar_pi_3SEXP, SEXP cholSEXP, SEXP delta_SUSEXP, SEXP prior_TFSEXP, SEXP mean_log_deltaSEXP, SEXP sd_log_deltaSEXP, SEXP sd_prior_non_informativeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -60,7 +60,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::IntegerVector const& >::type n_samples_per_group(n_samples_per_groupSEXP);
     Rcpp::traits::input_parameter< unsigned int const& >::type N_MCMC(N_MCMCSEXP);
     Rcpp::traits::input_parameter< unsigned int const& >::type burn_in(burn_inSEXP);
-    Rcpp::traits::input_parameter< unsigned int const& >::type thinning(thinningSEXP);
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::NumericMatrix>& >::type PI_SU(PI_SUSEXP);
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::NumericMatrix> const& >::type X_sce(X_sceSEXP);
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::NumericMatrix>& >::type MCMC_bar_pi_1(MCMC_bar_pi_1SEXP);
@@ -72,14 +71,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double const& >::type mean_log_delta(mean_log_deltaSEXP);
     Rcpp::traits::input_parameter< double const& >::type sd_log_delta(sd_log_deltaSEXP);
     Rcpp::traits::input_parameter< double const& >::type sd_prior_non_informative(sd_prior_non_informativeSEXP);
-    rcpp_result_gen = Rcpp::wrap(MCMC_sce(n_samples, n_genes, n_groups, numeric_groups, sample_ids_per_group, n_samples_per_group, N_MCMC, burn_in, thinning, PI_SU, X_sce, MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3, chol, delta_SU, prior_TF, mean_log_delta, sd_log_delta, sd_prior_non_informative));
+    rcpp_result_gen = Rcpp::wrap(Rcpp_MCMC_sce(n_samples, n_genes, n_groups, numeric_groups, sample_ids_per_group, n_samples_per_group, N_MCMC, burn_in, PI_SU, X_sce, MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3, chol, delta_SU, prior_TF, mean_log_delta, sd_log_delta, sd_prior_non_informative));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_DifferentialRegulation_MCMC", (DL_FUNC) &_DifferentialRegulation_MCMC, 25},
-    {"_DifferentialRegulation_MCMC_sce", (DL_FUNC) &_DifferentialRegulation_MCMC_sce, 20},
+    {"_DifferentialRegulation_Rcpp_MCMC", (DL_FUNC) &_DifferentialRegulation_Rcpp_MCMC, 25},
+    {"_DifferentialRegulation_Rcpp_MCMC_sce", (DL_FUNC) &_DifferentialRegulation_Rcpp_MCMC_sce, 19},
     {NULL, NULL, 0}
 };
 

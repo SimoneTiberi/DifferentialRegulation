@@ -15,7 +15,27 @@
 #' @return A \code{SingleCellExperiment} object.
 #' 
 #' @examples
-#' TODO
+#' # load internal data to the package:
+#' data_dir = system.file("extdata", package = "DifferentialRegulation")
+#' 
+#' # specify 4 samples ids:
+#' sample_ids = paste0("sample_", seq_len(4))
+#' # set directories of each sample input data (obtained via alevin-fry):
+#' base_dir = file.path(data_dir, "alevin-fry", sample_ids)
+#' file.exists(base_dir)
+#' 
+#' # set paths to USA counts, cell id and gene id:
+#' # Note that alevin-fry needs to be run with `--use-mtx` option
+#' # to store counts in a `quants_mat.mtx` file.
+#' path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
+#' path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
+#' path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
+#'
+#' # load USA counts:
+#' sce = load_USA(path_to_counts,
+#'                path_to_cell_id,
+#'                path_to_gene_id,
+#'                sample_ids)
 #' 
 #' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
 #' 
@@ -78,24 +98,25 @@ load_USA = function(path_to_counts,
   }
   
   # ensure the length of spliced is the same across samples (i.e., same number of genes):
-  if(length(unique(sapply(spliced, ncol))) != 1){
+  if(length(unique(vapply(spliced, ncol, FUN.VALUE = integer(1) ))) != 1){
     message("counts in path_to_counts must have the same number of genes")
     return(NULL)
   }
   
-  S = do.call(rbind, spliced)
-  U = do.call(rbind, unspliced)
-  A = do.call(rbind, ambiguous)
-  
-  sce <- SingleCellExperiment(assays=list(spliced=t(S), 
-                                          unspliced=t(U),
-                                          ambiguous=t(A)),
-                              colData = data.frame(sample_id = factor(rep(sample_ids, sapply(spliced, nrow))) ))
-  # check that rownames = gene id
-  # check that colnames = cell id
+  S = t(do.call(rbind, spliced))
+  U = t(do.call(rbind, unspliced))
+  A = t(do.call(rbind, ambiguous))
   
   # we define "counts" as spliced + 50% of ambiguous counts
-  assays(sce)$counts = assays(sce)$spliced + 0.5 * assays(sce)$ambiguous 
+  C = S + 0.5 * A
+  
+  sce <- SingleCellExperiment(assays=list(spliced= S, 
+                                          unspliced= U,
+                                          ambiguous= A,
+                                          counts = C),
+                              colData = data.frame(sample_id = factor(rep(sample_ids, vapply(spliced, nrow,  FUN.VALUE = integer(1) ))) ))
+  # check that rownames = gene id
+  # check that colnames = cell id
   
   sce
 }
