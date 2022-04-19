@@ -25,13 +25,15 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
 ```
 
 # Introduction
-*DifferentialRegulation* is ...
+*DifferentialRegulation* is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
+*DifferentialRegulation* accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
+In particular, when providing equivaelence classes data (via `EC_list`), reads that are compatible with multiple genes, or multiple splicing versions of a gene (unspliced spliced or ambiguous), are allocated to the gene of origin and their splicing version.
+Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs).
 
 To access the R code used in the vignettes, type:
 ```{r vignettes, eval=FALSE} 
 browseVignettes("DifferentialRegulation")
 ```
-
 
 Questions relative to *DifferentialRegulation* should be reported as a new issue at *[BugReports](https://github.com/SimoneTiberi/DifferentialRegulation/issues)*.
 
@@ -39,7 +41,6 @@ To cite *DifferentialRegulation*, type:
 ```{r citation} 
 citation("DifferentialRegulation")
 ```
-
 
 ## Bioconductor installation
 `DifferentialRegulation` is available on [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/DifferentialRegulation.html) and can be installed with the command:
@@ -49,7 +50,7 @@ if (!requireNamespace("BiocManager", quietly=TRUE))
 BiocManager::install("DifferentialRegulation")
 ```
 
-## Alignment and quantification with alevin-fry
+## Alignment and quantification with *alevin-fry*
 *DifferentialRegulation* inputs scRNA-seq data, aligned via *alevin-fry* [@alevin-fry].
 
 NOTE: when using *alevin-fry*, set options `--d` (or `--dump-eqclasses`), to obtain the equivalence classes, and `--use-mtx`, to store counts in a `quants_mat.mtx` file (as expected by our `load_USA` function).
@@ -57,7 +58,7 @@ NOTE: when using *alevin-fry*, set options `--d` (or `--dump-eqclasses`), to obt
 We also recommend using the `--CR-like-EM` option, which also allows equivalence classes of reads that map to multiple genes.
 
 # Pipeline
-Load *DifferentialRegulation*
+Load *DifferentialRegulation*.
 ```{r load, message=FALSE}
 library(DifferentialRegulation)
 ```
@@ -81,6 +82,12 @@ path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
 path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
 ```
 
+Specify the directory of the ECs and respective counts, inferred via *alevin-fry*.
+```{r specify_directories_EC}
+path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+```
+
 ### Load USA counts
 Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry*, in a *SingleCellExperiment*.
 By default, counts (stored in assays(sce)$counts) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
@@ -100,12 +107,6 @@ sce$cell_type = "Hepatocytes"
 Here, we assume that basic quality control and filtering of low quality cells have been performed.
 
 ### Load equivalence classes (EC)
-Specify the directory of the ECs and respective counts, inferred via *alevin-fry*.
-```{r specify_directories_EC}
-path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
-path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
-```
-
 Load the equivalence classes and respective counts (only needed when performing differential testing on ECs).
 ```{r load_EC_counts}
 EC_list = load_EC(path_to_EC_counts,
@@ -115,24 +116,19 @@ EC_list = load_EC(path_to_EC_counts,
                   sample_ids)
 ```
 
-## Define the design of the study
-We define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
+## Differential regulation testing 
+Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
+Using EC counts allows to explicitly model the uncertainty from reads that map to multiple genes.
+
+First, we define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
 ```{r samples_design}
 design = data.frame(sample = sample_ids,
                     group = c("A", "A", "B", "B"))
 design
 ```
 
-The groups are defined in:
-```{r groups}
-levels(design$group)
-```
-
-## Differential regulation testing 
-Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
-Using EC counts allows to explicitly model the uncertainty from reads that map to multiple genes.
-
 ### USA testing
+To perform differential testing on USA esitmated counts, set `EC_list` to `NULL` (or leave it unspecified).
 ```{r sce-test}
 # sce-based test:
 set.seed(169612)
@@ -141,24 +137,20 @@ results_USA = DifferentialRegulation(sce = sce,
                                      design =  design,
                                      sample_col_name = "sample",
                                      group_col_name = "group",
-                                     sce_cluster_name = "cell_type",
-                                     min_cells_per_cluster = 100, 
-                                     min_counts_per_gene_per_group = 20,
-                                     n_cores = NULL, # by default = n_clusters
-                                     N_MCMC = 2000,
-                                     burn_in = 500)
+                                     sce_cluster_name = "cell_type")
 ```
 
 We can sort results by significance, if we want, before visualizing them.
-```{r visualize_results, eval = FALSE}
+```{r visualize_results_USA}
 # sort results by significance:
 results_USA = results_USA[ order(results_USA$p_val), ]
 # visualize head of results:
 head(results_USA)
 ```
 
-### EC testing
-```{r EC-test, eval = FALSE}
+### EC testing (recommended option)
+To perform differential testing on EC counts, we set `EC_list` to the object computed above via `load_EC`.
+```{r EC-test}
 # EC-based test:
 set.seed(169612)
 results_EC = DifferentialRegulation(sce = sce,
@@ -168,11 +160,12 @@ results_EC = DifferentialRegulation(sce = sce,
                                  group_col_name = "group",
                                  sce_cluster_name = "cell_type",
                                  min_cells_per_cluster = 100, 
-                                 min_counts_per_gene_per_group = 20,
-                                 n_cores = NULL, # by default = n_clusters
-                                 N_MCMC = 2000,
-                                 burn_in = 500)
+                                 min_counts_per_gene_per_group = 20)
 
+```
+
+As above, we can sort results by significance before visualizing them.
+```{r visualize_results_EC}
 # sort results by significance:
 results_EC = results_EC[ order(results_EC$p_val), ]
 # visualize head of results:

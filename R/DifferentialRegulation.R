@@ -231,7 +231,7 @@ DifferentialRegulation = function(sce,
   }
   
   cl = makeCluster(n_cores, setup_strategy = "sequential")
-  registerDoParallel(cl, n_cores);
+  registerDoParallel(cl, n_cores)
   
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run MCMC in parallel:
