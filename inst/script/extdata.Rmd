@@ -7,4 +7,251 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-TODO!
+# Data
+We use a real droplet scRNA-seq dataset from Velasco et al. (2019).
+In particular, we compare two groups of three samples, consisting of human brain organoids, cultured for 3 and 6 months.
+For computational reasons, we stored a subset of this dataset, in our package, consisting of 100 genes and 3,493 cells, belonging to two cell-types.
+Cell-type assignment was done in the original styudy (Velasco et al., 2019), and is publicly available in the `meta_combined.txt` file [here](https://singlecell.broadinstitute.org/single_cell/study/SCP282/reproducible-brain-organoids#study-download).
+
+Raw data can also be downloaded [here](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA531650&o=acc_s%3Aa).
+
+# Download data
+
+# Genome
+TODO
+
+# Alignment via *alevin-fry*
+TODO
+
+# Selection of 1,000 genes only
+To make the example portable, we selected 100 genes and cells from 2 cell types only (RG and Cycling).
+``` r
+rm(list = ls())
+
+# specify 4 samples ids:
+sample_ids = paste0("organoid", c(1:3, 16:18))
+# set directories of each sample input data (obtained via alevin-fry):
+base_dir = file.path("human alevin-fry", sample_ids, "alevin")
+
+path_to_counts = file.path(base_dir,"quants_mat.mtx")
+path_to_cell_id = file.path(base_dir,"quants_mat_rows.txt")
+path_to_gene_id = file.path(base_dir,"quants_mat_cols.txt")
+path_to_EC_counts = file.path(base_dir,"geqc_counts.mtx")
+path_to_EC = file.path(base_dir,"gene_eqclass.txt.gz")
+
+n_genes_keep = 100
+for(i in seq_along(sample_ids)){
+  ############################################################################################################
+  # quants_mat_rows.txt: cell id
+  ############################################################################################################
+  library(data.table)
+  cell_id = fread(path_to_cell_id[[i]],
+                  sep = " ", quote = "", header = FALSE)
+  
+  # assign cell types
+  md <- read.csv("meta_combined.txt", sep = "\t")
+  md <- md[grepl("PGP1", md$Batch), ]
+  md$SEQ <- sapply(md$NAME, FUN = function (x) strsplit(x, split = "_")[[1]][3])
+  
+  # keep organoids 1:3 and 16:18 only
+  md = md[ md$Organoid %in% c("1", "2", "3", "16", "17", "18"), ]
+  table(md$Organoid)
+  # rename organoids 16:18 as 4:6
+  md$Organoid[md$Organoid == "16"]  = "4"
+  md$Organoid[md$Organoid == "17"]  = "5"
+  md$Organoid[md$Organoid == "18"]  = "6"
+  
+  md$Organoid = as.numeric(md$Organoid)
+  table(md$Organoid)
+  
+  md = md[md$Organoid == i, ]
+  
+  matches = match(cell_id$V1, md$SEQ)
+  head(cell_id$V1); head(md$SEQ[matches])
+  tail(cell_id$V1); tail(md$SEQ[matches])
+  
+  cell_type <- md$CellType[matches]
+  rm(md); rm(matches)
+  
+  sel_cells = cell_type %in% c("RG", "Cycling")
+  sel_cells[is.na(sel_cells)] = FALSE
+  table(sel_cells)
+  
+  cell_id = cell_id[sel_cells,]
+  
+  colnames(cell_id) = NULL
+  
+  file_name = file.path("alevin-fry", sample_ids[i], "alevin/quants_mat_rows.txt")
+  fwrite(cell_id, file = file_name)
+  
+  cell_id_reload = fread(file_name, 
+                         sep = " ", quote = "", header = FALSE)
+  
+  # OK, same sizer and content:
+  dim(cell_id_reload); dim(cell_id)
+  print(all(cell_id_reload == cell_id))
+  
+  ############################################################################################################
+  # quants_mat.mtx: USA estimated counts
+  ############################################################################################################
+  library(Matrix)
+  counts = readMM(path_to_counts[[i]])
+  
+  # sel cells from above:
+  counts = counts[sel_cells,]
+  
+  n_genes = ncol(counts)/3
+  
+  # first n_genes refer to S
+  # second n_genes refer to U
+  # third n_genes refer to A
+  spliced  = counts[, seq.int(1, n_genes) ]
+  unspliced = counts[, seq.int(n_genes+1, 2*n_genes)]
+  ambiguous = counts[, seq.int(2*n_genes+1, 3*n_genes)]
+  
+  counts_keep = cbind(spliced[, seq_len(n_genes_keep) ], 
+                      unspliced[, seq_len(n_genes_keep)],
+                      ambiguous[, seq_len(n_genes_keep)])
+  
+  file_name = file.path("alevin-fry", sample_ids[i], "alevin/quants_mat.mtx")
+  writeMM(counts_keep, file = file_name)
+  
+  counts_reload = readMM(file_name)
+  # OK, same sizer and content:
+  dim(counts_reload); dim(counts_keep)
+  print(all(counts_keep == counts_reload))
+  
+  ############################################################################################################
+  # quants_mat_cols.txt: gene id
+  ############################################################################################################
+  gene_id = fread(path_to_gene_id[[i]],
+                  sep = " ", quote = "", header = FALSE)
+  n_genes_original = nrow(gene_id)/3
+  
+  sel = seq_len(n_genes_keep)
+  gene_id_keep = gene_id[c(sel,
+                           n_genes_original + sel,
+                           2 * n_genes_original+sel)]
+  colnames(gene_id_keep) = NULL
+  
+  file_name = file.path("alevin-fry", sample_ids[i], "alevin/quants_mat_cols.txt")
+  fwrite(gene_id_keep, file = file_name)
+  
+  gene_id_reload = fread(file_name, 
+                         sep = " ", quote = "", header = FALSE)
+  
+  # OK, same sizer and content:
+  dim(gene_id_reload); dim(gene_id_keep)
+  print(all(gene_id_reload == gene_id_keep))
+  
+  ############################################################################################################
+  # ECs ids:
+  ############################################################################################################
+  # load ECs: 
+  EC_genes = fread(path_to_EC[[i]],
+                   sep = " ", quote = "", header = FALSE)[[1]]
+  
+  # remove first 2 numbers:
+  EC_genes = EC_genes[-c(1,2)]  
+  # 1st number: number of transcripts (n_genes * 3)
+  # 2nd number: number of equivalence classes
+  
+  # load EC counts
+  EC_counts = readMM(path_to_EC_counts[[i]])
+  
+  # select cells
+  EC_counts_keep = EC_counts[sel_cells, ]
+  
+  # remove ECs with 0 counts:
+  sel_non_zero_ECs = colSums(EC_counts_keep) > 0
+  EC_genes = EC_genes[sel_non_zero_ECs]
+  
+  n_EC  = length(EC_genes)
+  # load EC info:
+  X = EC_genes[seq_len(n_EC)] # vector with all transcript ids
+  # split info separated by "\t":
+  X = strsplit(X,"\t",fixed=TRUE)
+  # turn character ids into numeric:
+  X = lapply(X, as.integer)
+  
+  # ECs id, corresponds to rows in EC 
+  EC_id = 1 + vapply(X, function(x){
+    x[length(x)]
+  }, FUN.VALUE = integer(1))
+  
+  # ECs gene ids, as in "gene_id" file.
+  EC_gene_id = lapply(X, function(x){
+    x[-length(x)]
+  })
+  rm(X)
+  
+  # keep initial n_genes_keep genes, then NA (genes to be removed):
+  seq_to_rep = c(seq_len(n_genes_keep)-1, rep(NA, n_genes - n_genes_keep))
+  transform_ids = c(seq_to_rep, 
+                    seq_to_rep + n_genes_keep,
+                    seq_to_rep + 2*n_genes_keep)
+  
+  # transform gene ids -> keep initial n_genes_keep genes, then NA (genes to be removed):
+  EC_gene_id = lapply(EC_gene_id, function(x){
+    transform_ids[x + 1]
+  })
+  
+  # remove NAs (genes removed)
+  EC_gene_id = lapply(EC_gene_id, function(x){
+    x[!is.na(x)]
+  })
+  
+  # keep only ECs with at least 1 element:
+  keep_ECs = sapply(EC_gene_id, length) > 0.5
+  EC_gene_id = EC_gene_id[keep_ECs]
+  EC_id = EC_id[keep_ECs]
+  
+  # store this ECs to be saved
+  keep_EC_matrix = EC_id
+  
+  # set EC_id to 0, ..., n_ECs - 1
+  EC_id = seq_along(keep_EC_matrix)-1
+  
+  n_EC_keep = length(EC_id)
+  
+  # merge gene ids and EC ids:
+  XX = lapply(seq_len(n_EC_keep), function(i){
+    paste( c( unlist(EC_gene_id[[i]]), EC_id[[i]]), collapse =  "\t")
+  })
+  
+  # create new EC object
+  XX = c(n_genes_keep * 3, # n_genes kept
+         n_EC_keep,
+         XX)    # n_ECs kept
+  
+  XX = data.table(XX)
+  colnames(XX) = NULL
+  
+  file_name = file.path("alevin-fry", sample_ids[i], "alevin/gene_eqclass.txt.gz")
+  fwrite(XX, file = file_name)
+  
+  EC_genes_reload = fread(file_name,
+                          sep = " ", quote = "", header = FALSE)
+  
+  # OK, same sizer and content:
+  dim(EC_genes_reload); dim(XX)
+  print(all(EC_genes_reload == XX))
+  
+  ############################################################################################################
+  # ECs counts:
+  ############################################################################################################
+  # transform EC_id to new size of the matrix
+  EC_counts_keep = EC_counts_keep[, keep_EC_matrix]
+  
+  file_name = file.path("alevin-fry", sample_ids[i], "alevin/geqc_counts.mtx")
+  writeMM(EC_counts_keep, file = file_name)
+  
+  EC_counts_reload = readMM(file_name)
+  
+  # OK, same sizer and content:
+  dim(EC_counts_reload); dim(EC_counts_keep)
+  print(all(EC_counts_keep == EC_counts_reload))
+  
+  print(i)
+}
+```

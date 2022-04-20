@@ -75,8 +75,8 @@ via a multivariate Wald test on the posterior densities of the group-level USA (
 # load internal data to the package:
 data_dir = system.file("extdata", package = "DifferentialRegulation")
 
-# specify 4 samples ids:
-sample_ids = paste0("sample_", seq_len(4))
+# specify samples ids:
+sample_ids = paste0("organoid", c(1:3, 16:18))
 # set directories of each sample input data (obtained via alevin-fry):
 base_dir = file.path(data_dir, "alevin-fry", sample_ids)
 file.exists(base_dir)
@@ -96,12 +96,14 @@ sce = load_USA(path_to_counts,
  
 # define the design of the study:
 design = data.frame(sample = sample_ids,
-group = c("A", "A", "B", "B"))
+                    group = c( rep("3 mon", 3), rep("6 mon", 3) ))
 design
 
 # cell types should be assigned to each cell;
-# here we assume all cells belong to cell-type "cell":
-sce$cell_type = "cell"
+# here we load pre-computed cell types:
+data("DF_cell_types", package = "DifferentialRegulation")
+matches = match(colnames(sce), DF_cell_types$cell_id)
+sce$cell_type = DF_cell_types$cell_type[matches]
                
 # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 set.seed(169612)

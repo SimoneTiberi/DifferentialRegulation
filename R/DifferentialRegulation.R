@@ -42,8 +42,8 @@
 #' # load internal data to the package:
 #' data_dir = system.file("extdata", package = "DifferentialRegulation")
 #' 
-#' # specify 4 samples ids:
-#' sample_ids = paste0("sample_", seq_len(4))
+#' # specify samples ids:
+#' sample_ids = paste0("organoid", c(1:3, 16:18))
 #' # set directories of each sample input data (obtained via alevin-fry):
 #' base_dir = file.path(data_dir, "alevin-fry", sample_ids)
 #' file.exists(base_dir)
@@ -63,12 +63,14 @@
 #'  
 #' # define the design of the study:
 #' design = data.frame(sample = sample_ids,
-#' group = c("A", "A", "B", "B"))
+#'                     group = c( rep("3 mon", 3), rep("6 mon", 3) ))
 #' design
 #' 
 #' # cell types should be assigned to each cell;
-#' # here we assume all cells belong to cell-type "cell":
-#' sce$cell_type = "cell"
+#' # here we load pre-computed cell types:
+#' data("DF_cell_types", package = "DifferentialRegulation")
+#' matches = match(colnames(sce), DF_cell_types$cell_id)
+#' sce$cell_type = DF_cell_types$cell_type[matches]
 #'                
 #' # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 #' set.seed(169612)
@@ -147,12 +149,12 @@ DifferentialRegulation = function(sce,
   
   if(N_MCMC < 2*10^3){
     message("'N_MCMC' must be at least 2*10^3")
-    #return(NULL)
+    return(NULL)
   }
   
   if(burn_in < 500){
     message("'burn_in' must be at least 500")
-    #return(NULL)
+    return(NULL)
   }
   
   groups = factor(design[, sel_col ])
@@ -223,6 +225,9 @@ DifferentialRegulation = function(sce,
   # Register parallel cores:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   if(is.null(n_cores)){
+    message("'n_cores' was left 'NULL'.")
+    message("Since tasks are paralellized on cell clusters, we will set 'n_cores' to the number of clusters that will be analyzed.")
+    message("'n_cores' set to: ", n_cell_types)
     n_cores = n_cell_types
   }
   if(n_cores != n_cell_types){

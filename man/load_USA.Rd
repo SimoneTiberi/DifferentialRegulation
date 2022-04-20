@@ -30,8 +30,8 @@ and stores them into a \code{SingleCellExperiment} object.
 # load internal data to the package:
 data_dir = system.file("extdata", package = "DifferentialRegulation")
 
-# specify 4 samples ids:
-sample_ids = paste0("sample_", seq_len(4))
+# specify samples ids:
+sample_ids = paste0("organoid", c(1:3, 16:18))
 # set directories of each sample input data (obtained via alevin-fry):
 base_dir = file.path(data_dir, "alevin-fry", sample_ids)
 file.exists(base_dir)

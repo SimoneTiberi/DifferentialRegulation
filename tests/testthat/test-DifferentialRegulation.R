@@ -2,8 +2,8 @@ test_that("DifferentialRegulation() works faultlessly.", {
   # load internal data to the package:
   data_dir = system.file("extdata", package = "DifferentialRegulation")
   
-  # specify 4 samples ids:
-  sample_ids = paste0("sample_", seq_len(4))
+  # specify samples ids:
+  sample_ids = paste0("organoid", c(1:3, 16:18))
   # set directories of each sample input data (obtained via alevin-fry):
   base_dir = file.path(data_dir, "alevin-fry", sample_ids)
   file.exists(base_dir)
@@ -19,11 +19,16 @@ test_that("DifferentialRegulation() works faultlessly.", {
                  path_to_gene_id,
                  sample_ids)
   
+  # define the design of the study:
   design = data.frame(sample = sample_ids,
-                      group = c("A", "A", "B", "B"))
+                      group = c( rep("3 mon", 3), rep("6 mon", 3) ))
   design
   
-  sce$cell_type = "cell"
+  # cell types should be assigned to each cell;
+  # here we load pre-computed cell types:
+  data("DF_cell_types", package = "DifferentialRegulation")
+  matches = match(colnames(sce), DF_cell_types$cell_id)
+  sce$cell_type = DF_cell_types$cell_type[matches]
   
   # sce-based test:
   set.seed(169612)
@@ -34,8 +39,7 @@ test_that("DifferentialRegulation() works faultlessly.", {
                                        group_col_name = "group",
                                        sce_cluster_name = "cell_type",
                                        min_cells_per_cluster = 100, 
-                                       min_counts_per_gene_per_group = 20,
-                                       n_cores = NULL)
-
+                                       min_counts_per_gene_per_group = 20)
+  
   expect_is(results_USA, "data.frame")
 })

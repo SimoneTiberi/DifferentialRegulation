@@ -64,15 +64,20 @@ library(DifferentialRegulation)
 ```
 
 ## Load the data
-Specify the directory of the data (internal in the package).
+We use a real droplet scRNA-seq dataset from @Velasco_19.
+In particular, we compare two groups of three samples, consisting of human brain organoids, cultured for 3 and 6 months.
+For computational reasons, we stored a subset of this dataset, in our package, consisting of 100 genes and 3,493 cells, belonging to two cell-types.
+Cell-type assignment was done in the original styudy [@Velasco_19].
+
+We specify the directory of the data (internal in the package).
 ```{r specify_data-dir}
 data_dir = system.file("extdata", package = "DifferentialRegulation")
 ```
 
 Specify the directory of the USA (unspliced, spliced and ambiguous) estimated counts, inferred via *alevin-fry*.
 ```{r specify_directories}
-# specify 4 samples ids:
-sample_ids = paste0("sample_", seq_len(4))
+# specify samples ids:
+sample_ids = paste0("organoid", c(1:3, 16:18))
 # set directories of each sample input data (obtained via alevin-fry):
 base_dir = file.path(data_dir, "alevin-fry", sample_ids)
 
@@ -90,7 +95,7 @@ path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
 
 ### Load USA counts
 Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry*, in a *SingleCellExperiment*.
-By default, counts (stored in assays(sce)$counts) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
+By default, counts (stored in `assays(sce)$counts`) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
 ```{r load_USA_counts}
 sce = load_USA(path_to_counts,
                path_to_cell_id,
@@ -98,10 +103,12 @@ sce = load_USA(path_to_counts,
                sample_ids)
 ```
 
-Store cell-cluster or cell-type information.
-In our toy example data, all cells are Hepatocytes.
+Cell types should be assigned to each cell; here we load pre-computed cell types.
 ```{r cell-type}
-sce$cell_type = "Hepatocytes"
+data("DF_cell_types", package = "DifferentialRegulation")
+matches = match(colnames(sce), DF_cell_types$cell_id)
+sce$cell_type = DF_cell_types$cell_type[matches]
+table(sce$cell_type)
 ```
 
 Here, we assume that basic quality control and filtering of low quality cells have been performed.
@@ -115,6 +122,19 @@ EC_list = load_EC(path_to_EC_counts,
                   path_to_gene_id,
                   sample_ids)
 ```
+For every sample, `load_EC` prints the percentage of reads compatible with multiple genes (i.e., multi-gene mapping reads).
+Here multi-gene reads are relatively low, because we are considering a subset of 100 genes only; however, in the full dataset we found that approximately 40% of reads map to multiple genes.
+Intuitively, the larger these numbers, the greater the benefits one may achieve by using ECs and modelling the variability of these uncertain gene allocations.
+
+### QC and filtering
+Quality control (QC) and filtering of low quality cells can be performed as usual on the `sce` object.
+The `sce` object computed via `load_USA` contains a `counts` assays, defined as the summation of spliced counts and 50% of ambiguous counts.
+```{r sce_assays}
+library(SingleCellExperiment)
+assays(sce)
+```
+
+Importantly, cells only need to be filtered in the `sce` object: even when using ECs, cells that are filtered in the `sce` object will not be used for differential testing by `DifferentialRegulation` function.
 
 ## Differential regulation testing 
 Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
@@ -123,7 +143,7 @@ Using EC counts allows to explicitly model the uncertainty from reads that map t
 First, we define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
 ```{r samples_design}
 design = data.frame(sample = sample_ids,
-                    group = c("A", "A", "B", "B"))
+                    group = c( rep("3 mon", 3), rep("6 mon", 3) ))
 design
 ```
 
@@ -154,14 +174,11 @@ To perform differential testing on EC counts, we set `EC_list` to the object com
 # EC-based test:
 set.seed(169612)
 results_EC = DifferentialRegulation(sce = sce,
-                                 EC_list = EC_list,
-                                 design =  design,
-                                 sample_col_name = "sample",
-                                 group_col_name = "group",
-                                 sce_cluster_name = "cell_type",
-                                 min_cells_per_cluster = 100, 
-                                 min_counts_per_gene_per_group = 20)
-
+                                    EC_list = EC_list,
+                                    design =  design,
+                                    sample_col_name = "sample",
+                                    group_col_name = "group",
+                                    sce_cluster_name = "cell_type")
 ```
 
 As above, we can sort results by significance before visualizing them.
