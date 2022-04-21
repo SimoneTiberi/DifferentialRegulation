@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Data
-We use a real droplet scRNA-seq dataset from Velasco et al. (2019).
+We use a real droplet scRNA-seq dataset from Velasco et al. (2019), Nature 570 (7762): 523–27.
 In particular, we compare two groups of three samples, consisting of human brain organoids, cultured for 3 and 6 months.
 For computational reasons, we stored a subset of this dataset, in our package, consisting of 100 genes and 3,493 cells, belonging to two cell-types.
 Cell-type assignment was done in the original styudy (Velasco et al., 2019), and is publicly available in the `meta_combined.txt` file [here](https://singlecell.broadinstitute.org/single_cell/study/SCP282/reproducible-brain-organoids#study-download).
@@ -23,7 +23,7 @@ TODO
 # Alignment via *alevin-fry*
 TODO
 
-# Selection of 1,000 genes only
+# Selection of 100 genes only
 To make the example portable, we selected 100 genes and cells from 2 cell types only (RG and Cycling).
 ``` r
 rm(list = ls())
