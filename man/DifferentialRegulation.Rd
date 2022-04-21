@@ -101,7 +101,8 @@ design
 
 # cell types should be assigned to each cell;
 # here we load pre-computed cell types:
-data("DF_cell_types", package = "DifferentialRegulation")
+path_to_DF = file.path(data_dir,"DF_cell_types.txt")
+DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
                

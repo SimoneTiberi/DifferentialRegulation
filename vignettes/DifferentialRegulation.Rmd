@@ -105,7 +105,8 @@ sce = load_USA(path_to_counts,
 
 Cell types should be assigned to each cell; here we load pre-computed cell types.
 ```{r cell-type}
-data("DF_cell_types", package = "DifferentialRegulation")
+path_to_DF = file.path(data_dir,"DF_cell_types.txt")
+DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
 table(sce$cell_type)
@@ -129,10 +130,6 @@ Intuitively, the larger these numbers, the greater the benefits one may achieve 
 ### QC and filtering
 Quality control (QC) and filtering of low quality cells can be performed as usual on the `sce` object.
 The `sce` object computed via `load_USA` contains a `counts` assays, defined as the summation of spliced counts and 50% of ambiguous counts.
-```{r sce_assays}
-library(SingleCellExperiment)
-assays(sce)
-```
 
 Importantly, cells only need to be filtered in the `sce` object: even when using ECs, cells that are filtered in the `sce` object will not be used for differential testing by `DifferentialRegulation` function.
 
