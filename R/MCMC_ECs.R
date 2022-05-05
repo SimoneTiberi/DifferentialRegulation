@@ -19,8 +19,11 @@ MCMC_ECs = function(PB_data_prepared,
   # compute overall counts per cluster -> use this to rank highly abundant clusters first (likely more computationally intensive).
   overall_counts = vapply(PB_data_prepared, function(x){
     sum( unlist(x[[1]]) )
+    #sum(sapply(x[[1]], sum)) # needed when unsing sparce vectors (unlist fails)
   }, FUN.VALUE = numeric(1))
   order = order(overall_counts, decreasing = TRUE)
+  
+  rm(overall_counts)
   
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run in Parallel:
@@ -34,6 +37,8 @@ MCMC_ECs = function(PB_data_prepared,
                            S = PB_data_prepared[[cl]][[2]]
                            U = PB_data_prepared[[cl]][[3]]
                            A = PB_data_prepared[[cl]][[4]]
+                           
+                           rm(PB_data_prepared)
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                            # separate uniquely mapping ECs:
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -67,6 +72,8 @@ MCMC_ECs = function(PB_data_prepared,
                              counts[[sample]] = counts[[sample]][!unique]
                            }
                            
+                           rm(X); rm(unique); rm(sel); rm(SU_id); rm(n_EC)
+                           
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                            # FILTER 1) remove ECs with 0 counts (within a specific cell type):
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -75,7 +82,7 @@ MCMC_ECs = function(PB_data_prepared,
                              X > min_counts_ECs
                            })
                            
-                           lapply(list_EC_gene_id, length); lapply(list_EC_USA_id, length); lapply(counts, length)
+                           # lapply(list_EC_gene_id, length); lapply(list_EC_USA_id, length); lapply(counts, length)
                            
                            # trim EC gene list, each element = 1 EC, OK:
                            list_EC_gene_id = lapply(seq_len(n_samples), function(X){
@@ -92,29 +99,31 @@ MCMC_ECs = function(PB_data_prepared,
                              counts[[X]][ sel_non_zero_EC[[X]] ]
                            })
                            
-                           lapply(list_EC_gene_id, length); lapply(list_EC_USA_id, length); lapply(counts, length)
+                           #lapply(list_EC_gene_id, length); lapply(list_EC_USA_id, length); lapply(counts, length)
+                           
+                           rm(sel_non_zero_EC)
                            
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                            # FILTER 2) remove genes absent across ALL ECs of ALL genes...check sce of those genes -> it'd be ~ 0!
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                            # Select genes in ECs with non-zero counts:
-                           all_genes_ids = genes[ unique(unlist(list_EC_gene_id)) + 1 ]
+                           genes_non_zero = genes[ unique(unlist(list_EC_gene_id)) + 1 ]
                            # PLUS ADD GENES with UNIQUELY MAPPING READS!!!
-                           all_genes_ids = c(all_genes_ids,  genes[ rowSums(do.call(cbind, list_X_unique)) > 0 ] )
-                           all_genes_ids = unique(all_genes_ids)
-                           all_genes_ids = sort(all_genes_ids)
+                           genes_non_zero = c(genes_non_zero,  genes[ rowSums(do.call(cbind, list_X_unique)) > 0 ] )
+                           genes_non_zero = unique(genes_non_zero)
+                           genes_non_zero = sort(genes_non_zero)
                            
                            # for testing purposed: line 356
-                           # all_genes_ids = sel_genes
+                           # genes_non_zero = sel_genes
                            
-                           length(all_genes_ids)/n_genes
+                           # length(genes_non_zero)/n_genes
                            
                            # list_X_unique -> remove rows for non-selected genes
                            # list_EC_gene_id -> update gene ids
                            # n_genes -> n_genes_non_zero
                            
                            # genes
-                           matches = match(genes, all_genes_ids)
+                           matches = match(genes, genes_non_zero)
                            
                            list_EC_gene_id = lapply(list_EC_gene_id, function(X){
                              lapply(X, function(x){
@@ -122,14 +131,15 @@ MCMC_ECs = function(PB_data_prepared,
                              })
                            })
                            
-                           matches = match(all_genes_ids, genes)
+                           matches = match(genes_non_zero, genes)
                            list_X_unique = lapply(list_X_unique, function(x){
-                             # need to do: match(genes, all_genes_ids)
-                             # all_genes_ids don't necessarily follow the same order of genes!!
+                             # need to do: match(genes, genes_non_zero)
+                             # genes_non_zero don't necessarily follow the same order of genes!!
                              x[matches,] #
                            })
                            
-                           genes_non_zero = all_genes_ids
+                           rm(matches); rm(genes)
+                           
                            n_genes_non_zero = length(genes_non_zero)
                            
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -138,11 +148,9 @@ MCMC_ECs = function(PB_data_prepared,
                            TOT_counts = S + U + A
                            
                            # use pi_gene, estimated from sample-specific counts (+ 1):
-                           tot_counts = 1 + TOT_counts
-                           # WARNING: CHANGE THIS IN SIMULATION AND CHECK SAME RESULTS!!!
-                           matches = match(genes_non_zero, rownames(tot_counts))
+                           matches = match(genes_non_zero, rownames(TOT_counts))
                            
-                           PI_gene = tot_counts[matches, ]
+                           PI_gene = 1 + TOT_counts[matches, ]
                            rownames(PI_gene) = genes_non_zero
                            PI_gene[is.na(PI_gene)] = 1 # set NAs to 1
                            PI_gene[ PI_gene < 1 ] = 1 # set counts < 1 to 1
@@ -166,14 +174,19 @@ MCMC_ECs = function(PB_data_prepared,
                              X/rowSums(X)
                            })
                            
+                           rm(matches)
+                           
                            # set filter to analyze genes_non_zero: at least xxx counts across all cells.
                            counts_per_group = vapply(sample_ids_per_group, function(id){
                              rowSums(TOT_counts[, id + 1])
                            }, FUN.VALUE = numeric( nrow(TOT_counts) ) )
+                           
                            rm(TOT_counts)
                            
                            sel_genes = rowSums(counts_per_group >= min_counts_per_gene_per_group) == n_groups
                            sel_genes = gene_ids_sce[sel_genes]
+                           
+                           rm(counts_per_group)
                            
                            # to guarantee that the order is preserved:
                            sel_genes = genes_non_zero[ genes_non_zero %in% sel_genes ]
@@ -182,7 +195,8 @@ MCMC_ECs = function(PB_data_prepared,
                            n_genes_keep = length(keep_genes_id)
                            n_genes_keep
                            
-                           n_genes_keep; n_genes_non_zero
+                           rm(genes_non_zero)
+                           #n_genes_keep; n_genes_non_zero
                            
                            if(n_genes_keep > 0){ # if at least 1 gene is selected:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -197,14 +211,19 @@ MCMC_ECs = function(PB_data_prepared,
                              U = U[keep_sce,]
                              A = A[keep_sce,]
                              
-                             summary(rowSums(S + U + A))
+                             #summary(rowSums(S + U + A))
                              # should be > min selected above!!!
                              
                              # compute prior for the dispersion via DRIMSeq, based on the selected genes_non_zero only!
                              
                              gene_id_SUA = gene_ids_sce[keep_sce]
                              
+                             rm(keep_sce); rm(sel_genes_random); rm(gene_ids_sce)
+                             
                              S_U_A = rbind(S, U, A)
+                             
+                             rm(S); rm(U); rm(A);
+                             
                              gene_2_tr = data.frame(gene_id = rep(gene_id_SUA, 3),
                                                     transcript_id = c(paste(gene_id_SUA, "S"), 
                                                                       paste(gene_id_SUA, "U"), 
@@ -213,9 +232,11 @@ MCMC_ECs = function(PB_data_prepared,
                              
                              precision = prior_precision(gene_to_transcript = gene_2_tr,
                                                          transcript_counts = S_U_A,
-                                                         n_cores = 1)
+                                                         n_cores = 1)[[1]]
+                             # only store mean and var of precision.
                              
-                             rm(keep_sce)
+                             rm(gene_2_tr); rm(S_U_A)
+                             
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # initialize objects:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -233,7 +254,7 @@ MCMC_ECs = function(PB_data_prepared,
                                    x = x + PI_SU[[ids[i]]]
                                  }
                                }
-                               x = x/n * exp(precision$prior[1])
+                               x = x/n * exp(precision[1])
                              })
                              
                              chol = lapply(seq_len(n_groups), function(i){
@@ -268,15 +289,18 @@ MCMC_ECs = function(PB_data_prepared,
                                          chol,
                                          delta_SU,
                                          TRUE, # I ALWAYS USE THE PRIOR
-                                         precision$prior[1],
-                                         precision$prior[2], 
+                                         precision[1],
+                                         precision[2], 
                                          2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res[[1]], R = N_MCMC, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                             rm(res)
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
+                               rm(convergence)
+                               
                                message("Our MCMC did not converge (according to Heidelberger and Welch's convergence diagnostic):
                                        we will now double 'N_MCMC' and 'burn_in', and run it a second time.")
                                
@@ -292,6 +316,9 @@ MCMC_ECs = function(PB_data_prepared,
                                  X = cbind(tot_spliced[,x], tot_unspliced[,x], tot_ambiguous[,x])
                                  X/rowSums(X)
                                })
+                               
+                               rm(tot_spliced); rm(tot_unspliced); rm(tot_ambiguous)
+                               
                                delta_SU = lapply(seq_len(n_groups), function(g){
                                  ids = sample_ids_per_group[[g]] + 1
                                  n = length(ids)
@@ -334,7 +361,8 @@ MCMC_ECs = function(PB_data_prepared,
                                            precision$prior[2], 
                                            2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                                
-                               convergence = my_heidel_diag(res[[1]], R = N_MCMC, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                               rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
                                  return("Our algorithm did not converged, try to increase N_MCMC.")
@@ -352,21 +380,24 @@ MCMC_ECs = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
                              p_vals = vapply(seq_len(n_genes_keep), function(gene_id){
-                               a = res[[2]][[1]][sel,gene_id]
-                               b = res[[3]][[1]][sel,gene_id]
-                               c = res[[4]][[1]][sel,gene_id]
+                               a = MCMC_bar_pi_1[[1]][sel,gene_id]
+                               b = MCMC_bar_pi_2[[1]][sel,gene_id]
+                               c = MCMC_bar_pi_3[[1]][sel,gene_id]
                                tot = a+b+c
                                A = cbind(a, b, c)/tot
                                
-                               a = res[[2]][[2]][sel,gene_id]
-                               b = res[[3]][[2]][sel,gene_id]
-                               c = res[[4]][[2]][sel,gene_id]
+                               a = MCMC_bar_pi_1[[2]][sel,gene_id]
+                               b = MCMC_bar_pi_2[[2]][sel,gene_id]
+                               c = MCMC_bar_pi_3[[2]][sel,gene_id]
                                tot = a+b+c
                                B = cbind(a, b, c)/tot
                                
                                compute_pval_FULL( A = A, B = B, K = 3, N = n_samples)
                              }, FUN.VALUE = numeric(1))
                              # TODO: speed-up p-val computation!
+                             
+                             rm(MCMC_bar_pi_1); rm(MCMC_bar_pi_2); rm(MCMC_bar_pi_3)
+                             
                              p_adj = p.adjust(p_vals, method = "BH")
                              
                              RES = data.frame(Gene_id = sel_genes,
@@ -380,7 +411,7 @@ MCMC_ECs = function(PB_data_prepared,
                          }
   
   # merge results from multiple clusters, only if available
-  if(length(order) > 1){
+  if(length(order) > 1.5){
     RES = do.call(rbind, p_values_ALL)
   }else{
     RES = p_values_ALL[[1]]

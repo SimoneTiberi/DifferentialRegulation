@@ -46,6 +46,19 @@ load_USA = function(path_to_counts,
                     path_to_cell_id,
                     path_to_gene_id,
                     sample_ids){
+  if( !all(file.exists(path_to_counts)) ){ # if at least 1 file not found
+    message("'path_to_counts' files not found")
+    return(NULL)
+  }
+  if( !all(file.exists(path_to_cell_id)) ){ # if at least 1 file not found
+    message("'path_to_cell_id' files not found")
+    return(NULL)
+  }
+  if( !all(file.exists(path_to_gene_id)) ){ # if at least 1 file not found
+    message("'path_to_gene_id' files not found")
+    return(NULL)
+  }
+  
   n_samples = length(sample_ids)
   
   if( n_samples != length(path_to_counts) ){

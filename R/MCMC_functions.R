@@ -13,7 +13,10 @@ prepare_PB_counts = function(one_cluster_ids_kept, sce, clusters, n_samples,
     U[,i] = rowSums(assays(sce_one_sample)$unspliced)
     A[,i] = rowSums(assays(sce_one_sample)$ambiguous)
   }
-  
+  #S = Matrix(data=S, sparse = TRUE)
+  #U = Matrix(data=U, sparse = TRUE)
+  #A = Matrix(data=A, sparse = TRUE)
+
   if(!is.null(EC_list)){
     EC_counts = EC_list[[1]]
     # get cells with selected cell types in sce
@@ -25,6 +28,11 @@ prepare_PB_counts = function(one_cluster_ids_kept, sce, clusters, n_samples,
     })
     # compute pseudo-bulk counts aggregating counts across cells:
     counts = lapply(EC_counts, colSums)
+    # make counts a sparse Vector:
+    #counts = lapply(counts, function(x){
+    #  sel = x > 0.5
+    #  sparseVector(x[sel], which(sel), length(x))
+    #})
   }else{
     counts = NULL
   }

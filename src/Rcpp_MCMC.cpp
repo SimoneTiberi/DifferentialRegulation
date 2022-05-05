@@ -104,37 +104,36 @@ void my_rmvnorm_final(Rcpp::NumericVector& alpha_prop,
 
 
 // [[Rcpp::export]]
-Rcpp::List Rcpp_MCMC( unsigned int const& n_samples, // N samples
-                 unsigned int const& n_genes, // N genes
-                 unsigned int const& n_groups, // N groups
-                 unsigned int const& n_genes_keep, // TF vector indicating genes to be analyzed (SU differential testing)
-                 Rcpp::IntegerVector const& keep_genes_id, // group id for every sample (must start from 0)
-                 Rcpp::IntegerVector const& numeric_groups, // group id for every sample (must start from 0)
-                 Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, // each list = vector with ids of samples 
-                 Rcpp::IntegerVector const& n_samples_per_group,
-                 unsigned int const& N_MCMC, // MCMC iter
-                 unsigned int const& burn_in, // burn-in
-                 Rcpp::NumericMatrix& PI_gene, // prob of each gene (for every sample)
-                 Rcpp::ListOf<Rcpp::NumericMatrix> PI_SU, // prob of each gene (for every sample)
-                 Rcpp::ListOf<Rcpp::NumericMatrix> const& list_X_unique, // SU uniquely mapping counts
-                 Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> const& list_EC_gene_id, // SU uniquely mapping counts
-                 Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericVector>> const& list_EC_SU_id, // TRUE -> S; FALSE -> U
-                 Rcpp::ListOf<Rcpp::IntegerVector> counts, // EC counts (integers)
-                 Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1,
-                 Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2,
-                 Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3,
-                 Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol,
-                 Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU,
-                 bool const& prior_TF,
-                 double const& mean_log_delta,
-                 double const& sd_log_delta,
-                 double const& sd_prior_non_informative
+Rcpp::NumericVector Rcpp_MCMC( unsigned int const& n_samples, // N samples
+                               unsigned int const& n_genes, // N genes
+                               unsigned int const& n_groups, // N groups
+                               unsigned int const& n_genes_keep, // TF vector indicating genes to be analyzed (SU differential testing)
+                               Rcpp::IntegerVector const& keep_genes_id, // group id for every sample (must start from 0)
+                               Rcpp::IntegerVector const& numeric_groups, // group id for every sample (must start from 0)
+                               Rcpp::ListOf<Rcpp::IntegerVector> const& sample_ids_per_group, // each list = vector with ids of samples 
+                               Rcpp::IntegerVector const& n_samples_per_group,
+                               unsigned int const& N_MCMC, // MCMC iter
+                               unsigned int const& burn_in, // burn-in
+                               Rcpp::NumericMatrix& PI_gene, // prob of each gene (for every sample)
+                               Rcpp::ListOf<Rcpp::NumericMatrix>& PI_SU, // prob of each gene (for every sample)
+                               Rcpp::ListOf<Rcpp::NumericMatrix> const& list_X_unique, // SU uniquely mapping counts
+                               Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> const& list_EC_gene_id, // SU uniquely mapping counts
+                               Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericVector>> const& list_EC_SU_id, // TRUE -> S; FALSE -> U
+                               Rcpp::ListOf<Rcpp::IntegerVector> const& counts, // EC counts (integers)
+                               Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_1,
+                               Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_2,
+                               Rcpp::ListOf<Rcpp::NumericMatrix>& MCMC_bar_pi_3,
+                               Rcpp::ListOf<Rcpp::ListOf<Rcpp::NumericMatrix>>& chol,
+                               Rcpp::ListOf<Rcpp::NumericMatrix>& delta_SU,
+                               bool const& prior_TF,
+                               double const& mean_log_delta,
+                               double const& sd_log_delta,
+                               double const& sd_prior_non_informative
 ) {
   // Obtain environment containing chol function:
   Rcpp::Environment base("package:base"); 
   // Make chol function callable from C++precision$prior
   Rcpp::Function R_chol = base["chol"];    
-  
   
   for (unsigned int gr=0 ; gr < n_groups; gr++) {
     Rcpp::NumericMatrix tmp_1(N_MCMC, n_genes_keep), tmp_2(N_MCMC, n_genes_keep), tmp_3(N_MCMC, n_genes_keep);
@@ -367,6 +366,5 @@ Rcpp::List Rcpp_MCMC( unsigned int const& n_samples, // N samples
     MCMC_ll[iter] = ll + sum(prior_delta_SU);
   }
   
-  return List::create( MCMC_ll,
-                       MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3);
+  return MCMC_ll;
 }

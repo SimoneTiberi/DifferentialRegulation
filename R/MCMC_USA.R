@@ -1,4 +1,4 @@
-MCMC_sce = function(PB_data_prepared,
+MCMC_USA = function(PB_data_prepared,
                     min_counts_per_gene_per_group,
                     N_MCMC,
                     burn_in,
@@ -17,6 +17,8 @@ MCMC_sce = function(PB_data_prepared,
   }, FUN.VALUE = numeric(1))
   order = order(overall_counts, decreasing = TRUE)
   
+  rm(overall_counts)
+  
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run in Parallel:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -28,6 +30,8 @@ MCMC_sce = function(PB_data_prepared,
                            S = PB_data_prepared[[cl]][[2]]
                            U = PB_data_prepared[[cl]][[3]]
                            A = PB_data_prepared[[cl]][[4]]
+                           
+                           rm(PB_data_prepared)
                            
                            SUA = list()
                            for(i in seq_len(n_samples)){
@@ -42,8 +46,12 @@ MCMC_sce = function(PB_data_prepared,
                              rowSums(sample_counts[,id + 1])
                            }, FUN.VALUE = numeric( n_genes ) )
                            
+                           rm(sample_counts)
+                           
                            sel = rowSums(counts_per_group >= min_counts_per_gene_per_group) == n_groups
                            sel_genes = gene_ids_sce[sel]
+                           
+                           rm(counts_per_group)
                            
                            # to guarantee that the order is preserved:
                            sel_genes = gene_ids_sce[ gene_ids_sce %in% sel_genes ]
@@ -59,6 +67,8 @@ MCMC_sce = function(PB_data_prepared,
                              U = U[sel,]
                              A = A[sel,]
                              
+                             rm(sel)
+                             
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # DRIMSeq prior:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -67,13 +77,19 @@ MCMC_sce = function(PB_data_prepared,
                              
                              keep_sce = sel_genes %in% sel_genes_random
                              
+                             rm(sel_genes_random)
+                             
                              S = S[keep_sce,]
                              U = U[keep_sce,]
                              A = A[keep_sce,]
                              
                              gene_id_SUA = sel_genes[keep_sce]
+                             rm(keep_sce)
                              
                              S_U_A = rbind(S, U, A)
+                             
+                             rm(S); rm(U); rm(A);
+                             
                              gene_2_tr = data.frame(gene_id = rep(gene_id_SUA, 3),
                                                     transcript_id = c(paste(gene_id_SUA, "S"), 
                                                                       paste(gene_id_SUA, "U"), 
@@ -82,8 +98,10 @@ MCMC_sce = function(PB_data_prepared,
                              
                              precision = prior_precision(gene_to_transcript = gene_2_tr,
                                                          transcript_counts = S_U_A,
-                                                         n_cores = 1)
-                             rm(keep_sce)
+                                                         n_cores = 1)[[1]]
+                             
+                             rm(gene_2_tr); rm(S_U_A)
+                             
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # initialize objects:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -106,7 +124,7 @@ MCMC_sce = function(PB_data_prepared,
                                    x = x + PI_SU[[ids[i]]]
                                  }
                                }
-                               x = x/n * exp(precision$prior[1])
+                               x = x/n * exp(precision[1])
                              })
                              
                              chol = lapply(seq_len(n_groups), function(i){
@@ -135,14 +153,15 @@ MCMC_sce = function(PB_data_prepared,
                                          chol,
                                          delta_SU,
                                          TRUE, # I ALWAYS USE THE PRIOR
-                                         precision$prior[1],
-                                         precision$prior[2], 
+                                         precision[1],
+                                         precision[2], 
                                          2)
                              
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res[[1]], R = N_MCMC, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                             rm(res)
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
                                message("Our MCMC did not converge (according to Heidelberger and Welch's convergence diagnostic):
@@ -171,7 +190,7 @@ MCMC_sce = function(PB_data_prepared,
                                      x = x + PI_SU[[ids[i]]]
                                    }
                                  }
-                                 x = x/n * exp(precision$prior[1])
+                                 x = x/n * exp(precision[1])
                                })
                                
                                chol = lapply(seq_len(n_groups), function(i){
@@ -195,11 +214,12 @@ MCMC_sce = function(PB_data_prepared,
                                            chol,
                                            delta_SU,
                                            TRUE, # I ALWAYS USE THE PRIOR
-                                           precision$prior[1],
-                                           precision$prior[2], 
+                                           precision[1],
+                                           precision[2], 
                                            2)
                                
-                               convergence = my_heidel_diag(res[[1]], R = N_MCMC, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                               rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
                                  return("Our algorithm did not converged, try to increase N_MCMC.")
@@ -217,15 +237,15 @@ MCMC_sce = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
                              p_vals = vapply(seq_len(n_genes_keep), function(gene_id){
-                               a = res[[2]][[1]][sel,gene_id]
-                               b = res[[3]][[1]][sel,gene_id]
-                               c = res[[4]][[1]][sel,gene_id]
+                               a = MCMC_bar_pi_1[[1]][sel,gene_id]
+                               b = MCMC_bar_pi_2[[1]][sel,gene_id]
+                               c = MCMC_bar_pi_3[[1]][sel,gene_id]
                                tot = a+b+c
                                A = cbind(a, b, c)/tot
                                
-                               a = res[[2]][[2]][sel,gene_id]
-                               b = res[[3]][[2]][sel,gene_id]
-                               c = res[[4]][[2]][sel,gene_id]
+                               a = MCMC_bar_pi_1[[2]][sel,gene_id]
+                               b = MCMC_bar_pi_2[[2]][sel,gene_id]
+                               c = MCMC_bar_pi_3[[2]][sel,gene_id]
                                tot = a+b+c
                                B = cbind(a, b, c)/tot
                                
@@ -233,6 +253,8 @@ MCMC_sce = function(PB_data_prepared,
                              }, FUN.VALUE = numeric(1))
                              # TODO: speed-up p-val computation!
                              p_adj = p.adjust(p_vals, method = "BH")
+                             
+                             rm(MCMC_bar_pi_1); rm(MCMC_bar_pi_2); rm(MCMC_bar_pi_3)
                              
                              RES = data.frame(Gene_id = sel_genes,
                                               Cluster_id = rep(cluster_ids_kept[cl], length(sel_genes)),

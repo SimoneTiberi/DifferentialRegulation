@@ -201,14 +201,49 @@ DifferentialRegulation = function(sce,
   table_clusters = table(clusters)
   cluster_ids_kept = names(table_clusters[table_clusters >= min_cells_per_cluster])
   
-  message("the following cell types have more than ", min_cells_per_cluster, " cells and will be analyzed:")
-  message(cluster_ids_kept)
+  message("the following cell clusters (e.g., cell types) have more than ", min_cells_per_cluster, " cells and will be analyzed:")
+  message(paste(cluster_ids_kept, collapse = " --- "))
   
   n_cell_types = length(cluster_ids_kept)
   if( n_cell_types == 0 ){
     return(NULL)
   }
   
+  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+  # remove empty ECs and ECs with < min_counts_ECs counts
+  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+  if(!is.null(EC_list)){
+    # get cells with selected cell types in sce
+    cells_sel = colnames(sce[,clusters %in% cluster_ids_kept])
+    
+    # compute pseudo-bulk counts aggregating counts across cells:
+    counts = lapply(EC_list[[1]], function(x){
+      sel = rownames(x) %in% cells_sel
+      colSums(x[sel,])
+    })
+    
+    # select non-zero ECs and ECs with > min_counts_ECs counts
+    sel_non_zero_EC = lapply(counts, function(x){
+      x > min_counts_ECs 
+    })
+    # usually, ~ 1/3 of EC counts are 0 and should be removed.
+    rm(cells_sel); rm(counts)
+    
+    # filter EC_list object:
+    EC_list[[1]] = lapply(1:n_samples, function(i){
+      EC_list[[1]][[i]][,sel_non_zero_EC[[i]] ]
+    })
+    # filter counts:
+    EC_list[[2]] = lapply(1:n_samples, function(i){
+      EC_list[[2]][[i]][sel_non_zero_EC[[i]] ]
+    })
+    # filter counts:
+    EC_list[[3]] = lapply(1:n_samples, function(i){
+      EC_list[[3]][[i]][sel_non_zero_EC[[i]] ]
+    })
+    
+    rm(sel_non_zero_EC)
+  }
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # get pseudo-bulk EC counts and USA counts from sce:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -246,7 +281,7 @@ DifferentialRegulation = function(sce,
     message("'EC_list' was not provided: estimated counts in 'sce' will be used to perform differential testing (faster, but marginally less accurate).")
     message("If you want to use equivalence classes counts (recommended option: slower, but marginally more accurate), provide an 'EC_list' object, computed via 'load_EC' function.")
     
-    RES = MCMC_sce(PB_data_prepared,
+    RES = MCMC_USA(PB_data_prepared,
                    min_counts_per_gene_per_group,
                    N_MCMC,
                    burn_in,

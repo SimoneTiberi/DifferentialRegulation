@@ -104,7 +104,7 @@ void my_rmvnorm_final_no_ECs(Rcpp::NumericVector& alpha_prop,
 
 
 // [[Rcpp::export]]
-Rcpp::List Rcpp_MCMC_sce( unsigned int const& n_samples, // N samples
+Rcpp::NumericVector Rcpp_MCMC_sce( unsigned int const& n_samples, // N samples
                      unsigned int const& n_genes, // N genes
                      unsigned int const& n_groups, // N groups
                      Rcpp::IntegerVector const& numeric_groups, // group id for every sample (must start from 0)
@@ -321,6 +321,5 @@ Rcpp::List Rcpp_MCMC_sce( unsigned int const& n_samples, // N samples
     MCMC_ll[iter] = ll + sum(prior_delta_SU);
   }
   
-  return List::create(MCMC_ll,
-                       MCMC_bar_pi_1, MCMC_bar_pi_2, MCMC_bar_pi_3);
+  return MCMC_ll;
 }

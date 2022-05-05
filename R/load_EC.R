@@ -51,6 +51,22 @@ load_EC = function(path_to_EC_counts,
                    path_to_cell_id,
                    path_to_gene_id,
                    sample_ids){
+  if( !all(file.exists(path_to_EC_counts)) ){ # if at least 1 file not found
+    message("'path_to_EC_counts' files not found")
+    return(NULL)
+  }
+  if( !all(file.exists(path_to_EC)) ){ # if at least 1 file not found
+    message("'path_to_EC' files not found")
+    return(NULL)
+  }
+  if( !all(file.exists(path_to_cell_id)) ){ # if at least 1 file not found
+    message("'path_to_cell_id' files not found")
+    return(NULL)
+  }
+  if( !all(file.exists(path_to_gene_id)) ){ # if at least 1 file not found
+    message("'path_to_gene_id' files not found")
+    return(NULL)
+  }
   
   n_samples = length(sample_ids)
   
@@ -87,8 +103,7 @@ load_EC = function(path_to_EC_counts,
     
     # check if counts are sparse matrix: if not, turn counts intro Sparce object:
     if(!is(aa, "dgCMatrix")){
-      aa = Matrix(data=aa, 
-                  sparse = TRUE)
+      aa = Matrix(data=aa, sparse = TRUE)
     }
     EC_counts[[i]] = aa
     # as.integer(aa)
@@ -161,10 +176,10 @@ load_EC = function(path_to_EC_counts,
   if(n_samples > 1.5){
     cond = vapply(gene_id_list[seq.int(2, n_samples, by = 1)], function(x) all(gene_id_list[[1]] == x), FUN.VALUE = logical(1) )
     if(!all(cond) ){
-      message("gene ids contained in path_to_gene_id are not the same; maybe samples were not aligned and quantifies with the same reference transcriprome?")
+      message("gene ids contained in 'path_to_gene_id' are not the same; maybe samples were not aligned and quantifies with the same reference transcriprome?")
       return(NULL)
     }
-  }  
+  }
   
   list(EC_counts = EC_counts,
        list_EC_gene_id = list_EC_gene_id,
