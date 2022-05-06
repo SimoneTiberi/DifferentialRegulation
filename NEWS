@@ -1,3 +1,6 @@
+Changes in version 1.0.1:
++ memory usage (of DifferentialRegulation function) reduced
+
 Changes in version 1.0.0:
 + 1st version of the package
 + submitted to Bioconductor

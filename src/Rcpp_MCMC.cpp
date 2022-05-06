@@ -141,6 +141,7 @@ Rcpp::NumericVector Rcpp_MCMC( unsigned int const& n_samples, // N samples
     MCMC_bar_pi_2[gr] = tmp_2;
     MCMC_bar_pi_3[gr] = tmp_3;
   }
+  double tmp_1, tmp_2, tmp_3;
   
   // X is a temporary matrix to update the (s,u, a) reads of each sample:
   Rcpp::NumericMatrix X(n_genes, 3), prior_delta_SU(n_genes_keep, n_groups), cv_alpha(3, 3), pi_SU_sample(n_genes, 3), Y(N_MCMC, 3);
