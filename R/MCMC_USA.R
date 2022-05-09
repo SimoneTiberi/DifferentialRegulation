@@ -160,7 +160,7 @@ MCMC_USA = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
                              rm(res)
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
@@ -218,7 +218,7 @@ MCMC_USA = function(PB_data_prepared,
                                            precision[2], 
                                            2)
                                
-                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
@@ -249,7 +249,7 @@ MCMC_USA = function(PB_data_prepared,
                                tot = a+b+c
                                B = cbind(a, b, c)/tot
                                
-                               compute_pval_FULL( A = A, B = B, K = 3, N = n_samples)
+                               compute_pval( A = A, B = B, K = 3, N = n_samples)
                              }, FUN.VALUE = numeric(1))
                              # TODO: speed-up p-val computation!
                              p_adj = p.adjust(p_vals, method = "BH")

@@ -40,20 +40,20 @@ prepare_PB_counts = function(one_cluster_ids_kept, sce, clusters, n_samples,
   list(counts, S, U, A)
 }
 
-find.mode <- function(x, adjust, ...) {
+find_mode <- function(x, adjust, ...) {
   dx <- density(x, adjust = adjust, ...)
   dx$x[which.max(dx$y)]
 }
 
 # compute gene-level p-value:
-compute_pval_FULL = function(A, B, K = 3, N){
+compute_pval = function(A, B, K = 3, N){
   R = nrow(A)
   A = A[sample.int(R, R),] # n indicates the nr of elements of the chain (exluded burn-in)
   
   gamma = A - B
   
   CV     = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
-  mode   = apply(gamma, 2, find.mode, adjust = 10)
+  mode   = apply(gamma, 2, find_mode, adjust = 10)
   
   p = K-1
   
@@ -79,7 +79,7 @@ compute_pval_FULL = function(A, B, K = 3, N){
 # convergence diagnostic:
 my_heidel_diag = function(x, R, by., pvalue = 0.01){
   start.vec <- seq(from = 1, to = R/2, by = by.)
-  S0 <- my_spectrum0.ar(window(x, start = R/2), R/2+1)
+  S0 <- my_spectrum0_ar(window(x, start = R/2), R/2+1)
   
   converged <- FALSE
   for(i in seq(along = start.vec)){
@@ -88,7 +88,7 @@ my_heidel_diag = function(x, R, by., pvalue = 0.01){
     B <- cumsum(x) - sum(x) * seq_len(n)/n
     Bsq <- (B * B)/(n * S0)
     I <- sum(Bsq)/n
-    p = my_pcramer(I)
+    p = my_pcramer_(I)
     if(converged <- !is.na(I) && p < 1 - pvalue){
       break
     }
@@ -103,7 +103,7 @@ my_heidel_diag = function(x, R, by., pvalue = 0.01){
 }
 
 # additional function for my_heidel_diag
-my_spectrum0.ar = function(x, R){
+my_spectrum0_ar = function(x, R){
   lm.out <- lm(x ~ seq_len(R) )
   if(identical(all.equal(sd(residuals(lm.out)), 0), TRUE)) {
     v0 <- 0
@@ -116,7 +116,7 @@ my_spectrum0.ar = function(x, R){
 }
 
 # additional function for my_heidel_diag
-my_pcramer = function(q, eps = 1e-05){
+my_pcramer_ = function(q, eps = 1e-05){
   log.eps <- log(eps)
   y = vapply(seq(0, 3, by = 1), function(k){
     z <- gamma(k + 0.5) * sqrt(4 * k + 1)/(gamma(k + 1) * 
