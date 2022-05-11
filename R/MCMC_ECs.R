@@ -295,7 +295,7 @@ MCMC_ECs = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
+                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
                              rm(res)
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
@@ -361,11 +361,12 @@ MCMC_ECs = function(PB_data_prepared,
                                            precision$prior[2], 
                                            2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                                
-                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
+                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
-                                 return("Our algorithm did not converged, try to increase N_MCMC.")
+                                 message("Our algorithm did not converged, try to increase N_MCMC.")
+                                 return(NULL)
                                }
                              }
                              
@@ -379,7 +380,7 @@ MCMC_ECs = function(PB_data_prepared,
                              # compute p-value:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
-                             p_vals = vapply(seq_len(n_genes_keep), function(gene_id){
+                             p_vals = t(vapply(seq_len(n_genes_keep), function(gene_id){
                                a = MCMC_bar_pi_1[[1]][sel,gene_id]
                                b = MCMC_bar_pi_2[[1]][sel,gene_id]
                                c = MCMC_bar_pi_3[[1]][sel,gene_id]
@@ -393,17 +394,40 @@ MCMC_ECs = function(PB_data_prepared,
                                B = cbind(a, b, c)/tot
                                
                                compute_pval( A = A, B = B, K = 3, N = n_samples)
-                             }, FUN.VALUE = numeric(1))
+                             }, FUN.VALUE = numeric(21)))
                              # TODO: speed-up p-val computation!
                              
                              rm(MCMC_bar_pi_1); rm(MCMC_bar_pi_2); rm(MCMC_bar_pi_3)
                              
-                             p_adj = p.adjust(p_vals, method = "BH")
+                             p_adj = p.adjust(p_vals[,1], method = "BH")
                              
                              RES = data.frame(Gene_id = sel_genes,
                                               Cluster_id = rep(cluster_ids_kept[cl], length(sel_genes)),
-                                              p_val = p_vals,
-                                              p_adj.loc = p_adj)
+                                              p_val = p_vals[,1],
+                                              p_adj.glb = NA,
+                                              p_adj.loc = p_adj,
+                                              p_vals[,-1])
+                             
+                             colnames(RES)[-c(seq_len(5))] = c("pi_S-gr_A",
+                                                        "pi_U-gr_A",
+                                                        "pi_S-gr_B",
+                                                        "pi_U-gr_B",
+                                                        "sd_S-gr_A",
+                                                        "sd_U-gr_A",
+                                                        "sd_S-gr_B",
+                                                        "sd_U-gr_B",
+                                                        "pi_S-gr_A",
+                                                        "pi_U-gr_A",
+                                                        "pi_A-gr_A",
+                                                        "pi_S-gr_B",
+                                                        "pi_U-gr_B",
+                                                        "pi_A-gr_B",
+                                                        "sd_S-gr_A",
+                                                        "sd_U-gr_A",
+                                                        "sd_A-gr_A",
+                                                        "sd_S-gr_B",
+                                                        "sd_U-gr_B",
+                                                        "sd_A-gr_B")
                            }else{ # if n_genes_keep == 0
                              RES = NULL
                            }

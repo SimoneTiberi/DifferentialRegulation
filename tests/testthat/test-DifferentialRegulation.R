@@ -42,5 +42,8 @@ test_that("DifferentialRegulation() works faultlessly.", {
                                        min_cells_per_cluster = 100, 
                                        min_counts_per_gene_per_group = 20)
   
-  expect_is(results_USA, "data.frame")
+  expect_is(results_USA, "list")
+  expect_is(results_USA[[1]], "data.frame")
+  expect_is(results_USA[[2]], "data.frame")
+  expect_is(results_USA[[3]], "data.frame")
 })

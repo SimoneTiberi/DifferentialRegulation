@@ -1,7 +1,7 @@
 Package: DifferentialRegulation
 Type: Package
 Title: Differentially regulated genes from scRNA-seq data
-Version: 1.0.1
+Version: 1.0.2
 Description: DifferentialRegulation is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples),
   by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
   DifferentialRegulation accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
@@ -18,7 +18,7 @@ biocViews: DifferentialSplicing, Bayesian, Genetics,
   Software, Transcription, StatisticalMethod, Visualization, SingleCell, GeneTarget
 License: GPL-3
 Depends: R (>= 4.1.0)
-Imports: methods, Rcpp, doRNG, MASS, data.table, doParallel, parallel, foreach, stats, BANDITS, Matrix, SingleCellExperiment, SummarizedExperiment
+Imports: methods, Rcpp, doRNG, MASS, data.table, doParallel, parallel, foreach, stats, BANDITS, Matrix, SingleCellExperiment, SummarizedExperiment, ggplot2
 LinkingTo: Rcpp, RcppArmadillo
 Suggests: knitr, rmarkdown, testthat, BiocStyle
 SystemRequirements: C++11

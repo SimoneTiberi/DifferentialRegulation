@@ -63,7 +63,22 @@ If our algorithm does not converge even after increasing the burn-in,
 we automatically double N_MCMC and burn_in, and run it a second time (a message will be printed on screen to inform users).}
 }
 \value{
-A \code{data.frame} object.
+A \code{list} of 3 \code{data.frame} objects.
+'Differential_results' contains results from differential testing only;
+'US_results' has results for the proportion of Spliced and Unspliced counts 
+(Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
+'USA_results' has results for the proportion of Spliced, Unspliced and Ambiguous counts 
+(Ambiguous counts are reported separately from Spliced and Unspliced counts).
+Columns 'Gene_id' and 'Cluster_id' contain the gene and cell-cluster name, 
+while 'p_val', 'p_adj.loc' and 'p_adj.glb' report the raw p-values, locally and globally adjusted p-values, 
+via Benjamini and Hochberg (BH) correction.
+In locally adjusted p-values ('p_adj.loc') BH correction is applied to each cluster separately, 
+while in globally adjusted p-values ('p_adj.glb') BH correction is performed to the results from all clusters.
+Columns 'pi' and 'sd' indicate the proportion and standard deviation, respectively, 
+'S', 'U' and 'A' refer to Spliced, Unspliced and Ambiguous counts, respectively,
+while 'gr_A' and 'gr_B' refer to group A and B, respectively.
+For instance, columns 'pi_S-gr_A' and 'sd_S-gr_A' indicate the estimates and standard deviation (sd) 
+for the proportion of Spliced (pi_S) and Unspliced (pi_U) counts in group A, respectively.
 }
 \description{
 \code{DifferentialRegulation} identified differentially regulated genes between two conditions 
@@ -82,8 +97,8 @@ base_dir = file.path(data_dir, "alevin-fry", sample_ids)
 file.exists(base_dir)
 
 # set paths to USA counts, cell id and gene id:
-# Note that alevin-fry needs to be run with `--use-mtx` option
-# to store counts in a `quants_mat.mtx` file.
+# Note that alevin-fry needs to be run with '--use-mtx' option
+# to store counts in a 'quants_mat.mtx' file.
 path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
 path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
 path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
@@ -116,11 +131,19 @@ results_USA = DifferentialRegulation(sce = sce,
                                     sce_cluster_name = "cell_type",
                                     min_cells_per_cluster = 100, 
                                     min_counts_per_gene_per_group = 20)
-head(results_USA)
+# DifferentialRegulation returns of a list of 3 data.frames:
+# "Differential_results" contains results from differential testing only;
+# "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
+# "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
+names(results_USA)
+
+head(results_USA[[1]])
+head(results_USA[[2]])
 
 # We can also sort results by significance, if we want, before visualizing them.
-results_USA = results_USA[ order(results_USA$p_val), ]
-head(results_USA)
+DR = results_USA[[1]]
+DR = DR[ order(DR$p_val), ]
+head(DR)
 
 # For improved performance, at a higher computational cost,
 # we recommend using equivalence classes (EC) (here not run for computational reasons)
@@ -144,12 +167,25 @@ if(FALSE){
                                       sce_cluster_name = "cell_type",
                                       min_cells_per_cluster = 100, 
                                       min_counts_per_gene_per_group = 20)
-  head(results_EC)
+  names(results_EC)
+
+  head(results_EC[[1]])
+  head(results_EC[[2]])
+
+  # We can also sort results by significance, if we want, before visualizing them.
+  DR = results_EC[[1]]
+  DR = DR[ order(DR$p_val), ]
+  head(DR)
 }
+
+# plot top (i.e., most significant) result:
+plot_pi(results_USA,
+        gene_id = DR$Gene_id[1],
+        cluster_id = DR$Cluster_id[1])
 
 }
 \seealso{
-\code{\link{load_EC}}, \code{\link{load_USA}}
+\code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{plot_pi}},
 }
 \author{
 Simone Tiberi \email{simone.tiberi@uzh.ch}

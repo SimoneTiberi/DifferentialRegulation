@@ -1,3 +1,6 @@
+Changes in version 1.0.2:
++ function 'plot_pi' added
+
 Changes in version 1.0.1:
 + memory usage (of DifferentialRegulation function) reduced
 

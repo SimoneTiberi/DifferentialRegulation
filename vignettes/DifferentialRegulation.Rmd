@@ -157,14 +157,6 @@ results_USA = DifferentialRegulation(sce = sce,
                                      sce_cluster_name = "cell_type")
 ```
 
-We can sort results by significance, if we want, before visualizing them.
-```{r visualize_results_USA}
-# sort results by significance:
-results_USA = results_USA[ order(results_USA$p_val), ]
-# visualize head of results:
-head(results_USA)
-```
-
 ### EC testing (recommended option)
 To perform differential testing on EC counts, we set `EC_list` to the object computed above via `load_EC`.
 ```{r EC-test}
@@ -178,12 +170,61 @@ results_EC = DifferentialRegulation(sce = sce,
                                     sce_cluster_name = "cell_type")
 ```
 
-As above, we can sort results by significance before visualizing them.
-```{r visualize_results_EC}
-# sort results by significance:
-results_EC = results_EC[ order(results_EC$p_val), ]
-# visualize head of results:
-head(results_EC)
+### Visualizing results
+In both USA and ECs approaches, `DifferentialRegulation` function returns of a list of 3 data.frames:
+- `Differential_results`, which contains results from differential testing only;
+- `US_results`, that has results for the proportion of Spliced and Unspliced counts (where Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
+- `USA_results`, which includses results for the proportion of Spliced, Unspliced and Ambiguous counts (Ambiguous counts are reported separately from Spliced and Unspliced counts).
+```{r names-results}
+names(results_EC)
+```
+
+In `Differential_results` element, columns `Gene_id` and `Cluster_id` contain the gene and cell-cluster name,  while `p_val`, `p_adj.loc` and `p_adj.glb` report the raw p-values, locally and globally adjusted p-values, via Benjamini and Hochberg (BH) correction.
+In locally adjusted p-values (`p_adj.loc`) BH correction is applied to each cluster separately, while in globally adjusted p-values (`p_adj.glb`) BH correction is performed to the results from all clusters.
+```{r visualize_gene_results}
+DR = results_EC$Differential_results
+# We can also sort results by significance, if we want, before visualizing them.
+DR = DR[ order(DR$p_val), ]
+head(DR)
+```
+
+In `US_results` and `USA_results` elements, `pi` and `sd` indicate the proportion and standard deviation, respectively, `S`, `U` and `A` refer to Spliced, Unspliced and Ambiguous counts, respectively, while `gr_A` and `gr_B` refer to group A and B, respectively.
+For instance, columns `pi_S-gr_A` and `sd_S-gr_A` indicate the estimates and standard deviation (sd) for the proportion of Spliced (pi_S) and Unspliced (pi_U) counts in group A, respectively.
+
+We visualize US results.
+```{r visualize_US_results}
+US = results_EC$US_results
+# We can also sort results by significance, if we want, before visualizing them.
+US = US[ order(US$p_val), ]
+head(US)
+```
+
+We visualize USA results.
+```{r visualize_USA_results}
+USA = results_EC$USA_results
+# We can also sort results by significance, if we want, before visualizing them.
+USA = USA[ order(USA$p_val), ]
+head(USA)
+```
+
+Finally, we can plot the estimated proportions of spliced and unspliced reads.
+If `CI = TRUE` (default option), for each estimate, we can also add the respective profile Wald type confidence interval, of level `CI_level` (0.95 by default).
+Below, we visualize results for the most significant result (top of `DF` object, after ordering).
+
+Similarly to above, we can plot the proportion of US or USA reads.
+Note that, although US reads are easier to interpret, USA reads more closely reflect what is being compared between conditions.
+```{r plot_pi}
+plot_pi(results_EC,
+        type = "US",
+        gene_id = DR$Gene_id[1],
+        cluster_id = DR$Cluster_id[1])
+```
+
+```{r plot_pi_USA}
+plot_pi(results_EC,
+        type = "USA",
+        gene_id = DR$Gene_id[1],
+        cluster_id = DR$Cluster_id[1])
 ```
 
 # Session info

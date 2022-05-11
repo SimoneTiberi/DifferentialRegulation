@@ -16,7 +16,7 @@ prepare_PB_counts = function(one_cluster_ids_kept, sce, clusters, n_samples,
   #S = Matrix(data=S, sparse = TRUE)
   #U = Matrix(data=U, sparse = TRUE)
   #A = Matrix(data=A, sparse = TRUE)
-
+  
   if(!is.null(EC_list)){
     EC_counts = EC_list[[1]]
     # get cells with selected cell types in sce
@@ -52,8 +52,8 @@ compute_pval = function(A, B, K = 3, N){
   
   gamma = A - B
   
-  CV     = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
-  mode   = apply(gamma, 2, find_mode, adjust = 10)
+  CV  = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
+  mode = apply(gamma, 2, find_mode, adjust = 10)
   
   p = K-1
   
@@ -64,16 +64,33 @@ compute_pval = function(A, B, K = 3, N){
     1-pchisq(stat, df = K-1)
   }, FUN.VALUE = numeric(1))
   
-  # I return 4 versions of the p.value:
-  # 1) an average of the K p.values
-  # 2) the p.value obtained removing the smallest difference (min(gamma))
-  # 3) the p.value obtained removing the (overall summing the two groups) most lowly expressed transcript.
-  # 4) a randomly selected p_value
-  #sel_1 = which.min(abs(mode)) # min diff between pi's in A and B.
-  #sel_2 = which.min(mode_A + mode_B) # most lowly expressed transcript overall in A + B.
-  #ran = sample.int(K, 1)
+  # USA posterior mean and SD of both conditions, A and B.
+  mode_A_USA = colSums(A) # find.mode (mode) or sum (mean)
+  mode_A_USA = mode_A_USA/sum(mode_A_USA)
+  sd_A_USA = sqrt(diag(var(A)))
+  mode_B_USA = colSums(B) # find.mode (mode) or sum (mean)
+  mode_B_USA = mode_B_USA/sum(mode_B_USA)
+  sd_B_USA = sqrt(diag(var(B)))
   
-  mean(p_value)
+  # US posterior mean and SD of both conditions, A and B.
+  A[,1] = A[,1] + 0.5 * A[,3]
+  A[,2] = A[,2] + 0.5 * A[,3]
+  A = A[, seq_len(2)]
+  
+  B[,1] = B[,1] + 0.5 * B[,3]
+  B[,2] = B[,2] + 0.5 * B[,3]
+  B = B[, seq_len(2)]
+  
+  mode_A = colSums(A) # find.mode (mode) or sum (mean)
+  mode_A = mode_A/sum(mode_A)
+  sd_A = sqrt(diag(var(A)))
+  mode_B = colSums(B) # find.mode (mode) or sum (mean)
+  mode_B = mode_B/sum(mode_B)
+  sd_B = sqrt(diag(var(B)))
+  
+  c( mean(p_value), # p-value for Diff. Reg.
+    mode_A, mode_B, sd_A, sd_B, # posterior mean and SD for US pi
+    mode_A_USA, mode_B_USA, sd_A_USA, sd_B_USA) # posterior mean and SD for USA pi
 }
 
 # convergence diagnostic:
