@@ -7,7 +7,7 @@
 plot_pi(results, gene_id, cluster_id, type = "USA", CI = TRUE, CI_level = 0.95)
 }
 \arguments{
-\item{results}{a \code{list} of 3 \code{\linkS4class{data.frame}} objects, computed via \code{DifferentialRegulation}.}
+\item{results}{a \code{list} of 3 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.}
 
 \item{gene_id}{a character, indicating the gene to plot.}
 
@@ -70,29 +70,27 @@ DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
                
+PB_counts = compute_PB_counts(sce = sce,
+                              EC_list = NULL,
+                              design =  design,
+                              sample_col_name = "sample",
+                              group_col_name = "group",
+                              sce_cluster_name = "cell_type",
+                              min_cells_per_cluster = 100, 
+                              min_counts_per_gene_per_group = 20)
+                              
 # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 set.seed(169612)
-results_USA = DifferentialRegulation(sce = sce,
-                                    EC_list = NULL,
-                                    design =  design,
-                                    sample_col_name = "sample",
-                                    group_col_name = "group",
-                                    sce_cluster_name = "cell_type",
-                                    min_cells_per_cluster = 100, 
-                                    min_counts_per_gene_per_group = 20)
+results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
+
 # DifferentialRegulation returns of a list of 3 data.frames:
 # "Differential_results" contains results from differential testing only;
 # "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
 # "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
 names(results_USA)
 
-head(results_USA[[1]])
-head(results_USA[[2]])
-
-# We can also sort results by significance, if we want, before visualizing them.
-DR = results_USA[[1]]
-DR = DR[ order(DR$p_val), ]
-head(DR)
+# We visualize differential results:
+head(results_USA$Differential_results)
 
 # For improved performance, at a higher computational cost,
 # we recommend using equivalence classes (EC) (here not run for computational reasons)
@@ -102,14 +100,14 @@ head(DR)
 # plot USA proportions:
 plot_pi(results_USA,
         type = "USA",
-        gene_id = DR$Gene_id[1],
-        cluster_id = DR$Cluster_id[1])
+        gene_id = results_USA$Differential_results$Gene_id[1],
+        cluster_id = results_USA$Differential_results$Cluster_id[1])
 
 # plot US proportions:
 plot_pi(results_USA,
         type = "US",
-        gene_id = DR$Gene_id[1],
-        cluster_id = DR$Cluster_id[1])
+        gene_id = results_USA$Differential_results$Gene_id[1],
+        cluster_id = results_USA$Differential_results$Cluster_id[1])
 
 }
 \seealso{

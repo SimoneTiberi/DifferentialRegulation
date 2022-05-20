@@ -5,47 +5,18 @@
 \title{Discover differentially regulated genes}
 \usage{
 DifferentialRegulation(
-  sce,
-  EC_list = NULL,
-  design,
-  sample_col_name = "sample",
-  group_col_name = "group",
-  sce_cluster_name = "cell_type",
-  min_cells_per_cluster = 100,
-  min_counts_per_gene_per_group = 20,
-  min_counts_ECs = 0,
+  PB_counts,
+  EC = TRUE,
   n_cores = NULL,
   N_MCMC = 2000,
   burn_in = 500
 )
 }
 \arguments{
-\item{sce}{a \code{SingleCellExperiment} object, computed via \code{load_USA}.}
+\item{PB_counts}{a \code{list}, computed via \code{\link{compute_PB_counts}}}
 
-\item{EC_list}{a \code{list}, computed via \code{load_EC}.}
-
-\item{design}{a \code{\linkS4class{data.frame}} indicating the design of the experiment with one row for each sample;
-'design' must contain a column with the sample id and one with the group id.}
-
-\item{sample_col_name}{a character ("sample" by default), indicating the column name of the 'design' element which stores the sample id.}
-
-\item{group_col_name}{a character ("group" by default), indicating the column name of the 'design' element which stores the group id.}
-
-\item{sce_cluster_name}{a character ("cell_type" by default), indicating the name of the 'colData(sce)' element, 
-which stores the cluster id of each cell (i.e., colData(sce)$name_cluster).}
-
-\item{min_cells_per_cluster}{cell cluster (e.g., cell-type) filter.
-'min_cells_per_cluster' is the minimum number of cells, across all samples and groups, for a cell cluster to be considered.
-Cell clusters with less than 'min_cells_per_cluster' cells will not be analyzed.}
-
-\item{min_counts_per_gene_per_group}{minimum number of counts per gene, in each cell, across all samples of every group.
-In each cell cluster, only genes with at least 'min_counts_per_gene_per_group' counts in both groups of samples will be analyzed.}
-
-\item{min_counts_ECs}{equivalence classes (ECs) filter (NB: only used when 'EC_list' is provided)
-'min_counts_ECs' indicates the minimum number of counts (across all cells in a cell cluster) for each equivalence class;
-by default all ECs are considered (min_counts_ECs = 0).
-ECs with less or equal than 'min_counts_ECs' will be discarded.
-Increasing 'min_counts_ECs' will marginally decrease computational cost computational at the cost of a marginal loss in performance.}
+\item{EC}{a logical, indicating whether to use equivalence classes (if TRUE, default)
+or USA estimated counts (if FALSE).}
 
 \item{n_cores}{the number of cores to parallelize the tasks on.
 Since parallelization is at the cluster level (each cluster is parallelized on a thread), 
@@ -120,30 +91,28 @@ path_to_DF = file.path(data_dir,"DF_cell_types.txt")
 DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
-               
+
+PB_counts = compute_PB_counts(sce = sce,
+                              EC_list = NULL,
+                              design =  design,
+                              sample_col_name = "sample",
+                              group_col_name = "group",
+                              sce_cluster_name = "cell_type",
+                              min_cells_per_cluster = 100, 
+                              min_counts_per_gene_per_group = 20)
+                              
 # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 set.seed(169612)
-results_USA = DifferentialRegulation(sce = sce,
-                                    EC_list = NULL,
-                                    design =  design,
-                                    sample_col_name = "sample",
-                                    group_col_name = "group",
-                                    sce_cluster_name = "cell_type",
-                                    min_cells_per_cluster = 100, 
-                                    min_counts_per_gene_per_group = 20)
+results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
+
 # DifferentialRegulation returns of a list of 3 data.frames:
 # "Differential_results" contains results from differential testing only;
 # "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
 # "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
 names(results_USA)
 
-head(results_USA[[1]])
-head(results_USA[[2]])
-
-# We can also sort results by significance, if we want, before visualizing them.
-DR = results_USA[[1]]
-DR = DR[ order(DR$p_val), ]
-head(DR)
+# We visualize differential results:
+head(results_USA$Differential_results)
 
 # For improved performance, at a higher computational cost,
 # we recommend using equivalence classes (EC) (here not run for computational reasons)
@@ -159,29 +128,39 @@ if(FALSE){
                     path_to_gene_id,
                     sample_ids)
                     
-  results_EC = DifferentialRegulation(sce = sce,
-                                      EC_list = EC_list,
-                                      design =  design,
-                                      sample_col_name = "sample",
-                                      group_col_name = "group",
-                                      sce_cluster_name = "cell_type",
-                                      min_cells_per_cluster = 100, 
-                                      min_counts_per_gene_per_group = 20)
+  PB_counts = compute_PB_counts(sce = sce,
+                                EC_list = EC_list,
+                                design =  design,
+                                sample_col_name = "sample",
+                                group_col_name = "group",
+                                sce_cluster_name = "cell_type",
+                                min_cells_per_cluster = 100, 
+                                min_counts_per_gene_per_group = 20)
+  
+  # to reduce memory usage, we can remove the EC_list object:
+  rm(EC_list)
+  
+  set.seed(169612) 
+  results_EC = DifferentialRegulation(PB_counts)
+  
   names(results_EC)
-
-  head(results_EC[[1]])
-  head(results_EC[[2]])
-
-  # We can also sort results by significance, if we want, before visualizing them.
-  DR = results_EC[[1]]
-  DR = DR[ order(DR$p_val), ]
-  head(DR)
+  
+  # We visualize differential results:
+  head(results_EC$Differential_results)
 }
 
 # plot top (i.e., most significant) result:
+# plot USA proportions:
 plot_pi(results_USA,
-        gene_id = DR$Gene_id[1],
-        cluster_id = DR$Cluster_id[1])
+        type = "USA",
+        gene_id = results_USA$Differential_results$Gene_id[1],
+        cluster_id = results_USA$Differential_results$Cluster_id[1])
+
+# plot US proportions:
+plot_pi(results_USA,
+        type = "US",
+        gene_id = results_USA$Differential_results$Gene_id[1],
+        cluster_id = results_USA$Differential_results$Cluster_id[1])
 
 }
 \seealso{

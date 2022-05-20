@@ -5,7 +5,7 @@
 #' If 'CI' is TRUE, a profile Wald type confidence interval will also be added;
 #' the level of the confidence interval is specified by 'CI_level'.
 #' 
-#' @param results a \code{list} of 3 \code{\linkS4class{data.frame}} objects, computed via \code{DifferentialRegulation}.
+#' @param results a \code{list} of 3 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.
 #' @param gene_id a character, indicating the gene to plot.
 #' @param cluster_id a character, indicating the cell cluster to plot.
 #' @param type a character (either 'SU' or 'SUA').
@@ -55,29 +55,27 @@
 #' matches = match(colnames(sce), DF_cell_types$cell_id)
 #' sce$cell_type = DF_cell_types$cell_type[matches]
 #'                
+#' PB_counts = compute_PB_counts(sce = sce,
+#'                               EC_list = NULL,
+#'                               design =  design,
+#'                               sample_col_name = "sample",
+#'                               group_col_name = "group",
+#'                               sce_cluster_name = "cell_type",
+#'                               min_cells_per_cluster = 100, 
+#'                               min_counts_per_gene_per_group = 20)
+#'                               
 #' # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 #' set.seed(169612)
-#' results_USA = DifferentialRegulation(sce = sce,
-#'                                     EC_list = NULL,
-#'                                     design =  design,
-#'                                     sample_col_name = "sample",
-#'                                     group_col_name = "group",
-#'                                     sce_cluster_name = "cell_type",
-#'                                     min_cells_per_cluster = 100, 
-#'                                     min_counts_per_gene_per_group = 20)
+#' results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
+#' 
 #' # DifferentialRegulation returns of a list of 3 data.frames:
 #' # "Differential_results" contains results from differential testing only;
 #' # "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
 #' # "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
 #' names(results_USA)
 #' 
-#' head(results_USA[[1]])
-#' head(results_USA[[2]])
-#' 
-#' # We can also sort results by significance, if we want, before visualizing them.
-#' DR = results_USA[[1]]
-#' DR = DR[ order(DR$p_val), ]
-#' head(DR)
+#' # We visualize differential results:
+#' head(results_USA$Differential_results)
 #' 
 #' # For improved performance, at a higher computational cost,
 #' # we recommend using equivalence classes (EC) (here not run for computational reasons)
@@ -87,14 +85,14 @@
 #' # plot USA proportions:
 #' plot_pi(results_USA,
 #'         type = "USA",
-#'         gene_id = DR$Gene_id[1],
-#'         cluster_id = DR$Cluster_id[1])
+#'         gene_id = results_USA$Differential_results$Gene_id[1],
+#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
 #' 
 #' # plot US proportions:
 #' plot_pi(results_USA,
 #'         type = "US",
-#'         gene_id = DR$Gene_id[1],
-#'         cluster_id = DR$Cluster_id[1])
+#'         gene_id = results_USA$Differential_results$Gene_id[1],
+#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
 #'
 #' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
 #' 
@@ -167,11 +165,15 @@ plot_pi = function(results,
     sel_pi = 6:9
     sel_sd = 10:13
     tr_names = factor(c("S", "U"), levels = c("S", "U") )
+    
+    group_names = substring(colnames( DF )[c(6,8)],6)
   }else{
     DF = results$USA_results
     sel_pi = 6:11
     sel_sd = 12:17
     tr_names = factor(c("S", "U", "A"), levels = c("S", "U", "A") )
+    
+    group_names = substring(colnames( DF )[c(6,9)],6)
   }
   
   sel = which( (DF$Gene_id == gene_id) & (DF$Cluster_id == cluster_id) )
@@ -184,9 +186,6 @@ plot_pi = function(results,
     }
     return(NULL)
   }
-  
-  #group_names = levels(factor(x@samples_design$group))
-  group_names = c("A", "B")
   
   pi = DF[sel, sel_pi]
   SD =  DF[sel, sel_sd]

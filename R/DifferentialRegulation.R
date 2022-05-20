@@ -5,24 +5,9 @@
 #' Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques and a differential testing is performed 
 #' via a multivariate Wald test on the posterior densities of the group-level USA (Unspliced, Spliced and Ambiguous) counts relative abundance.
 #' 
-#' @param sce a \code{SingleCellExperiment} object, computed via \code{load_USA}.
-#' @param EC_list a \code{list}, computed via \code{load_EC}.
-#' @param design a \code{\linkS4class{data.frame}} indicating the design of the experiment with one row for each sample;
-#' 'design' must contain a column with the sample id and one with the group id.
-#' @param sample_col_name a character ("sample" by default), indicating the column name of the 'design' element which stores the sample id.
-#' @param group_col_name a character ("group" by default), indicating the column name of the 'design' element which stores the group id.
-#' @param sce_cluster_name a character ("cell_type" by default), indicating the name of the 'colData(sce)' element, 
-#' which stores the cluster id of each cell (i.e., colData(sce)$name_cluster).
-#' @param min_cells_per_cluster cell cluster (e.g., cell-type) filter.
-#' 'min_cells_per_cluster' is the minimum number of cells, across all samples and groups, for a cell cluster to be considered.
-#' Cell clusters with less than 'min_cells_per_cluster' cells will not be analyzed.  
-#' @param min_counts_per_gene_per_group minimum number of counts per gene, in each cell, across all samples of every group.
-#' In each cell cluster, only genes with at least 'min_counts_per_gene_per_group' counts in both groups of samples will be analyzed.  
-#' @param min_counts_ECs equivalence classes (ECs) filter (NB: only used when 'EC_list' is provided)
-#' 'min_counts_ECs' indicates the minimum number of counts (across all cells in a cell cluster) for each equivalence class;
-#' by default all ECs are considered (min_counts_ECs = 0).
-#' ECs with less or equal than 'min_counts_ECs' will be discarded.
-#' Increasing 'min_counts_ECs' will marginally decrease computational cost computational at the cost of a marginal loss in performance.
+#' @param PB_counts a \code{list}, computed via \code{\link{compute_PB_counts}}
+#' @param EC a logical, indicating whether to use equivalence classes (if TRUE, default)
+#' or USA estimated counts (if FALSE).
 #' @param n_cores the number of cores to parallelize the tasks on.
 #' Since parallelization is at the cluster level (each cluster is parallelized on a thread), 
 #' we suggest setting n_cores to the number of clusters (e.g., cell-types), as set by default if 'n_cores' is not specified.
@@ -87,30 +72,28 @@
 #' DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 #' matches = match(colnames(sce), DF_cell_types$cell_id)
 #' sce$cell_type = DF_cell_types$cell_type[matches]
-#'                
+#'
+#' PB_counts = compute_PB_counts(sce = sce,
+#'                               EC_list = NULL,
+#'                               design =  design,
+#'                               sample_col_name = "sample",
+#'                               group_col_name = "group",
+#'                               sce_cluster_name = "cell_type",
+#'                               min_cells_per_cluster = 100, 
+#'                               min_counts_per_gene_per_group = 20)
+#'                               
 #' # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
 #' set.seed(169612)
-#' results_USA = DifferentialRegulation(sce = sce,
-#'                                     EC_list = NULL,
-#'                                     design =  design,
-#'                                     sample_col_name = "sample",
-#'                                     group_col_name = "group",
-#'                                     sce_cluster_name = "cell_type",
-#'                                     min_cells_per_cluster = 100, 
-#'                                     min_counts_per_gene_per_group = 20)
+#' results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
+#' 
 #' # DifferentialRegulation returns of a list of 3 data.frames:
 #' # "Differential_results" contains results from differential testing only;
 #' # "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
 #' # "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
 #' names(results_USA)
 #' 
-#' head(results_USA[[1]])
-#' head(results_USA[[2]])
-#' 
-#' # We can also sort results by significance, if we want, before visualizing them.
-#' DR = results_USA[[1]]
-#' DR = DR[ order(DR$p_val), ]
-#' head(DR)
+#' # We visualize differential results:
+#' head(results_USA$Differential_results)
 #' 
 #' # For improved performance, at a higher computational cost,
 #' # we recommend using equivalence classes (EC) (here not run for computational reasons)
@@ -126,64 +109,50 @@
 #'                     path_to_gene_id,
 #'                     sample_ids)
 #'                     
-#'   results_EC = DifferentialRegulation(sce = sce,
-#'                                       EC_list = EC_list,
-#'                                       design =  design,
-#'                                       sample_col_name = "sample",
-#'                                       group_col_name = "group",
-#'                                       sce_cluster_name = "cell_type",
-#'                                       min_cells_per_cluster = 100, 
-#'                                       min_counts_per_gene_per_group = 20)
+#'   PB_counts = compute_PB_counts(sce = sce,
+#'                                 EC_list = EC_list,
+#'                                 design =  design,
+#'                                 sample_col_name = "sample",
+#'                                 group_col_name = "group",
+#'                                 sce_cluster_name = "cell_type",
+#'                                 min_cells_per_cluster = 100, 
+#'                                 min_counts_per_gene_per_group = 20)
+#'   
+#'   # to reduce memory usage, we can remove the EC_list object:
+#'   rm(EC_list)
+#'   
+#'   set.seed(169612) 
+#'   results_EC = DifferentialRegulation(PB_counts)
+#'   
 #'   names(results_EC)
-#' 
-#'   head(results_EC[[1]])
-#'   head(results_EC[[2]])
-#' 
-#'   # We can also sort results by significance, if we want, before visualizing them.
-#'   DR = results_EC[[1]]
-#'   DR = DR[ order(DR$p_val), ]
-#'   head(DR)
+#'   
+#'   # We visualize differential results:
+#'   head(results_EC$Differential_results)
 #' }
 #' 
 #' # plot top (i.e., most significant) result:
+#' # plot USA proportions:
 #' plot_pi(results_USA,
-#'         gene_id = DR$Gene_id[1],
-#'         cluster_id = DR$Cluster_id[1])
+#'         type = "USA",
+#'         gene_id = results_USA$Differential_results$Gene_id[1],
+#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
+#' 
+#' # plot US proportions:
+#' plot_pi(results_USA,
+#'         type = "US",
+#'         gene_id = results_USA$Differential_results$Gene_id[1],
+#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
 #'
 #' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
 #' 
 #' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{plot_pi}}, 
 #' 
 #' @export
-DifferentialRegulation = function(sce,
-                                  EC_list = NULL,
-                                  design,
-                                  sample_col_name = "sample",
-                                  group_col_name = "group",
-                                  sce_cluster_name = "cell_type",
-                                  min_cells_per_cluster = 100, 
-                                  min_counts_per_gene_per_group = 20,
-                                  min_counts_ECs = 0,
+DifferentialRegulation = function(PB_counts,
+                                  EC = TRUE,
                                   n_cores = NULL, # by default = n_clusters
                                   N_MCMC = 2000,
                                   burn_in = 500){
-  if( !is.data.frame(design) ){
-    message("'design' must be a data.frame object")
-    return(NULL)
-  }
-  # select the column of design which is called 'group_col_name'
-  if( !(group_col_name %in% colnames(design)) ){
-    message("Column ", group_col_name, " missing in 'design'")
-    message("'group_col_name' should specify the column name of 'design' containing the group id of each sample")
-    return(NULL)
-  }
-  sel_col = which(group_col_name == colnames(design))
-  if( length(sel_col) > 1.5 ){
-    message( length(sel_col) , " columns from 'design' are called ", group_col_name)
-    message("Remove duplicated columns from 'design' and provide a unique column for the group id")
-    return(NULL)
-  }
-  
   if(N_MCMC < 2*10^3){
     message("'N_MCMC' must be at least 2*10^3")
     return(NULL)
@@ -194,104 +163,31 @@ DifferentialRegulation = function(sce,
     return(NULL)
   }
   
-  groups = factor(design[, sel_col ])
-  levels_groups = levels(groups)
-  n_groups = length(levels_groups)
-  numeric_groups = as.numeric(groups)
+  # retrieve objects needed:
+  PB_data_prepared = PB_counts[[1]]
+  min_counts_per_gene_per_group = PB_counts[[2]]
+  n_samples = PB_counts[[3]]
+  n_samples_per_group = PB_counts[[4]]
+  numeric_groups = PB_counts[[5]]
+  cluster_ids_kept = PB_counts[[6]]
+  sample_ids_per_group = PB_counts[[7]]
+  n_groups = PB_counts[[8]]
+  gene_ids_sce = PB_counts[[9]]
+  n_cell_types = PB_counts[[10]]
+  levels_groups = PB_counts[[11]]
   
-  sample_ids_per_group = lapply(seq_len(n_groups), function(gr){
-    which(numeric_groups == gr) - 1 # -1 !
-  })
-  n_samples_per_group = vapply(sample_ids_per_group, length, FUN.VALUE = integer(1) )
-  
-  # select the column of design which is called 'sample_col_name'
-  if( !(sample_col_name %in% colnames(design)) ){
-    message("Column ", sample_col_name, " missing in 'design'")
-    message("'sample_col_name' should specify the column name of 'design' containing the group id of each sample")
-    return(NULL)
-  }
-  sel_col = which(sample_col_name == colnames(design))
-  if( length(sel_col) > 1.5 ){
-    message( length(sel_col) , " columns from 'design' are called ", sample_col_name)
-    message("Remove duplicated columns from 'design' and provide a unique column for the group id")
-    return(NULL)
-  }
-  samples = design[, sel_col ]
-  n_samples = length(samples)
-  
-  # cluster ids:
-  sel = which(names(colData(sce)) == sce_cluster_name)
-  if( length(sel) == 0 ){
-    message("'sce_cluster_name' not found in names(colData(sce))")
-    return(NULL)
-  }
-  if( length(sel) > 1 ){
-    message("'sce_cluster_name' found multiple times in names(colData(sce))")
-    return(NULL)
-  }
-  clusters = factor(colData(sce)[[sel]])
-  n_clusters = nlevels(clusters)
-  # clusters = as.integer(as.numeric(clusters)-1)
-  
-  # select cell types with at least xx cells across all samples
-  table_clusters = table(clusters)
-  cluster_ids_kept = names(table_clusters[table_clusters >= min_cells_per_cluster])
-  
-  message("the following cell clusters (e.g., cell types) have more than ", min_cells_per_cluster, " cells and will be analyzed:")
-  message(paste(cluster_ids_kept, collapse = " --- "))
-  
-  n_cell_types = length(cluster_ids_kept)
-  if( n_cell_types == 0 ){
-    return(NULL)
+  if(!EC){
+    message("'EC' was set to 'FALSE': estimated counts will be used to perform differential testing (faster, but marginally less accurate).")
+    message("We recommend using equivalence classes counts (slower, but marginally more accurate).")
+  }else{
+    min_counts_ECs = PB_counts[[12]]
+    list_EC_gene_id = PB_counts[[13]]
+    list_EC_USA_id = PB_counts[[14]]
+    genes = PB_counts[[15]]
+    n_genes = PB_counts[[16]]
   }
   
-  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  # remove empty ECs and ECs with < min_counts_ECs counts
-  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  if(!is.null(EC_list)){
-    # get cells with selected cell types in sce
-    cells_sel = colnames(sce[,clusters %in% cluster_ids_kept])
-    
-    # compute pseudo-bulk counts aggregating counts across cells:
-    counts = lapply(EC_list[[1]], function(x){
-      sel = rownames(x) %in% cells_sel
-      colSums(x[sel,])
-    })
-    
-    # select non-zero ECs and ECs with > min_counts_ECs counts
-    sel_non_zero_EC = lapply(counts, function(x){
-      x > min_counts_ECs 
-    })
-    # usually, ~ 1/3 of EC counts are 0 and should be removed.
-    rm(cells_sel); rm(counts)
-    
-    # filter EC_list object:
-    EC_list[[1]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[1]][[i]][,sel_non_zero_EC[[i]] ]
-    })
-    # filter counts:
-    EC_list[[2]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[2]][[i]][sel_non_zero_EC[[i]] ]
-    })
-    # filter counts:
-    EC_list[[3]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[3]][[i]][sel_non_zero_EC[[i]] ]
-    })
-    
-    rm(sel_non_zero_EC)
-  }
-  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  # get pseudo-bulk EC counts and USA counts from sce:
-  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  PB_data_prepared = lapply(cluster_ids_kept,
-                            prepare_PB_counts,
-                            sce = sce, clusters = clusters,
-                            n_samples = n_samples, EC_list = EC_list)
-  
-  gene_ids_sce = rownames(sce)
-  
-  # rm (heavy) unnecessary objects:
-  rm(sce); rm(clusters);
+  rm(PB_counts)
   
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # Register parallel cores:
@@ -313,30 +209,7 @@ DifferentialRegulation = function(sce,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run MCMC in parallel:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  if(is.null(EC_list)){
-    message("'EC_list' was not provided: estimated counts in 'sce' will be used to perform differential testing (faster, but marginally less accurate).")
-    message("If you want to use equivalence classes counts (recommended option: slower, but marginally more accurate), provide an 'EC_list' object, computed via 'load_EC' function.")
-    
-    RES = MCMC_USA(PB_data_prepared,
-                   min_counts_per_gene_per_group,
-                   N_MCMC,
-                   burn_in,
-                   n_samples,
-                   n_samples_per_group,
-                   numeric_groups,
-                   cl,
-                   cluster_ids_kept,
-                   sample_ids_per_group,
-                   n_groups,
-                   gene_ids_sce)
-  }else{
-    list_EC_gene_id = EC_list[[2]]
-    list_EC_USA_id = EC_list[[3]]
-    genes = EC_list[[4]]
-    n_genes = length(genes)
-    
-    rm(EC_list) # rm after check!
-    
+  if(EC){
     RES = MCMC_ECs(PB_data_prepared,
                    min_counts_per_gene_per_group,
                    N_MCMC,
@@ -354,9 +227,36 @@ DifferentialRegulation = function(sce,
                    n_genes,
                    list_EC_gene_id,
                    list_EC_USA_id)
+  }else{
+    RES = MCMC_USA(PB_data_prepared,
+                   min_counts_per_gene_per_group,
+                   N_MCMC,
+                   burn_in,
+                   n_samples,
+                   n_samples_per_group,
+                   numeric_groups,
+                   cl,
+                   cluster_ids_kept,
+                   sample_ids_per_group,
+                   n_groups,
+                   gene_ids_sce)
   }
   stopCluster(cl) 
   stopImplicitCluster()
+  
+  # Replace group names, with those provided in design
+  names = colnames(RES)
+  sel_A = grep("gr_A", names )
+  sel_B = grep("gr_B", names )
+  
+  colnames(RES)[sel_A] = gsub("gr_A", levels_groups[1], names[sel_A] )
+  colnames(RES)[sel_B] = gsub("gr_B", levels_groups[2], names[sel_B] )
+  
+  # order results by significance (raw p-value)
+  ord = order(RES$p_val)
+  if(! ( any(is.na(ord)) | any(is.null(ord)) | any(is.nan(ord)) ) ){
+    RES = RES[ ord, ]
+  }
   
   res = list( Differential_results = RES[, seq_len(5)],
               US_results = RES[, seq_len(13)],

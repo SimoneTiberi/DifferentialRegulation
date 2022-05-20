@@ -25,22 +25,40 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
 ```
 
 # Introduction
-*DifferentialRegulation* is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
-*DifferentialRegulation* accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
-In particular, when providing equivaelence classes data (via `EC_list`), reads that are compatible with multiple genes, or multiple splicing versions of a gene (unspliced spliced or ambiguous), are allocated to the gene of origin and their splicing version.
-Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs).
+*DifferentialRegulation* is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced (S) and unspliced (U) mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
 
-To access the R code used in the vignettes, type:
-```{r vignettes, eval=FALSE} 
-browseVignettes("DifferentialRegulation")
-```
+Below, we briefly illustrate the main conceptual and mathematical aspects.
+For more details, a pre-print will follow shortly (~summer 2022).
 
-Questions relative to *DifferentialRegulation* should be reported as a new issue at *[BugReports](https://github.com/SimoneTiberi/DifferentialRegulation/issues)*.
+## Conceptual idea
 
-To cite *DifferentialRegulation*, type:
-```{r citation} 
-citation("DifferentialRegulation")
-```
+*DifferentialRegulation* is based on a similar rationale to RNA velocity tools, notably *velocyto* [@velocyto] and *scVelo* [@scVelo], which compare spliced and unspliced abundances to their equilibrium levels.
+
+Intuitively, if a large fraction of U is present for a gene, this will be spliced and increase the relative abundance of S.
+Conversely, if a small fraction of U is present for a gene, the newly spliced mRNA will not compensate the degradation of the (already) spliced mRNA, and the proportion of S will decrease in the short term.
+Therefore, in the two examples above, the gene is currently being up- and down-regulated, respectively; i.e., gene expression is going to increase and decrease, respectively.
+
+We extend this argument to compare the relative abundances of S and U reads across groups of samples.
+In particular, a higher proportion of unspliced (spliced) mRNA in a condition suggests that a gene is currently being up- (down-) regulated compared to the other condition.
+
+While canonical differential gene expression focuses on changes in overall gene abundance, *DifferentialRegulation* discovers differences (between conditions) in the near future changes of (spliced) gene expression (conceptually similar to the derivative of S respect to time).
+
+Similarly to RNA velocity tools, *DifferentialRegulation* is an instrument to facilitate discoveries in the context of development.
+
+## Mathematical details
+
+From a mathematical point of view, *DifferentialRegulation* accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
+Our method also deals with two major sources of mapping uncertainty: i) 'ambiguous' reads, compatible with both spliced and unspliced versions of a gene, and ii) reads mapping to multiple genes.
+In particular, ambiguous reads are treated separately from spliced and unsplced reads; furthermore, when providing equivalence classes data (via `EC_list`), reads that are compatible with multiple genes are allocated to the gene of origin.
+
+*DifferentialRegulation* uses two nested models:
+
+- a Dirichlet-multinomial ($DM$) for the proportions of unspliced, spliced and ambiguous (USA) reads in each gene: $DM(\pi_U, \pi_S, \pi_A, \delta)$, where $\pi_U, \pi_S, \pi_A$ indicate the (group-level) relative abundances of U, S and A counts, and $\delta$ represents the precision parameter, modelling the degree of over-dispersion between samples;
+- a multinomial ($MN$) for the (sample-specific) relative abundance of genes in each sample: $MN(\pi^i_1, ..., \pi^i_{n_g})$, where $\pi^i_g$ is the relative abundance of the $g$-th gene in the $i$-th sample.
+
+The $DM$ model is the main focus here, and the one which is used for differential testing between conditions, while the $MN$ model is necessary for allocating reads across genes.
+
+Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs), and differential testing is performed by comparing $(\pi_U, \pi_S, \pi_A)$ between conditions.
 
 ## Bioconductor installation
 `DifferentialRegulation` is available on [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/DifferentialRegulation.html) and can be installed with the command:
@@ -50,12 +68,33 @@ if (!requireNamespace("BiocManager", quietly=TRUE))
 BiocManager::install("DifferentialRegulation")
 ```
 
-## Alignment and quantification with *alevin-fry*
+To access the R code used in the vignettes, type:
+```{r vignettes, eval=FALSE} 
+browseVignettes("DifferentialRegulation")
+```
+
+## Questions and issues
+
+Questions relative to *DifferentialRegulation* should be reported as a new issue at *[BugReports](https://github.com/SimoneTiberi/DifferentialRegulation/issues)*.
+
+To cite *DifferentialRegulation*, type:
+```{r citation} 
+citation("DifferentialRegulation")
+```
+
+# Input data: alignment and quantification with *alevin-fry*
 *DifferentialRegulation* inputs scRNA-seq data, aligned via *alevin-fry* [@alevin-fry].
 
-NOTE: when using *alevin-fry*, set options `--d` (or `--dump-eqclasses`), to obtain the equivalence classes, and `--use-mtx`, to store counts in a `quants_mat.mtx` file (as expected by our `load_USA` function).
+NOTE: when using *alevin-fry*, set options:
+
+- `--d` (or `--dump-eqclasses`), to obtain the equivalence classes;
+- `--use-mtx`, to store counts in a `quants_mat.mtx` file (as expected by our `load_USA` function).
 
 We also recommend using the `--CR-like-EM` option, which also allows equivalence classes of reads that map to multiple genes.
+
+Software: https://github.com/COMBINE-lab/alevin-fry
+
+Documentation: https://alevin-fry.readthedocs.io/en/latest/index.html
 
 # Pipeline
 Load *DifferentialRegulation*.
@@ -68,6 +107,7 @@ We use a real droplet scRNA-seq dataset from @Velasco_19.
 In particular, we compare two groups of three samples, consisting of human brain organoids, cultured for 3 and 6 months.
 For computational reasons, we stored a subset of this dataset, in our package, consisting of 100 genes and 3,493 cells, belonging to two cell-types.
 Cell-type assignment was done in the original styudy [@Velasco_19].
+For more information about the data, refer to the original study [here](https://doi.org/10.1038/s41586-019-1289-x).
 
 We specify the directory of the data (internal in the package).
 ```{r specify_data-dir}
@@ -101,6 +141,8 @@ sce = load_USA(path_to_counts,
                path_to_cell_id,
                path_to_gene_id,
                sample_ids)
+
+sce
 ```
 
 Cell types should be assigned to each cell; here we load pre-computed cell types.
@@ -111,8 +153,6 @@ matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
 table(sce$cell_type)
 ```
-
-Here, we assume that basic quality control and filtering of low quality cells have been performed.
 
 ### Load equivalence classes (EC)
 Load the equivalence classes and respective counts (only needed when performing differential testing on ECs).
@@ -127,11 +167,13 @@ For every sample, `load_EC` prints the percentage of reads compatible with multi
 Here multi-gene reads are relatively low, because we are considering a subset of 100 genes only; however, in the full dataset we found that approximately 40% of reads map to multiple genes.
 Intuitively, the larger these numbers, the greater the benefits one may achieve by using ECs and modelling the variability of these uncertain gene allocations.
 
-### QC and filtering
+## QC and filtering
 Quality control (QC) and filtering of low quality cells can be performed as usual on the `sce` object.
 The `sce` object computed via `load_USA` contains a `counts` assays, defined as the summation of spliced counts and 50% of ambiguous counts.
 
-Importantly, cells only need to be filtered in the `sce` object: even when using ECs, cells that are filtered in the `sce` object will not be used for differential testing by `DifferentialRegulation` function.
+For examples of QC, you can refer to the [OSCA book](http://bioconductor.org/books/3.15/OSCA.basic/quality-control.html) [@OSCA].
+
+Importantly, cells only need to be filtered in the `sce` object, and NOT in the `EC_list` object: cells that are filtered in `sce` will also be removed from ECs by `compute_PB_counts` function.
 
 ## Differential regulation testing 
 Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
@@ -144,34 +186,42 @@ design = data.frame(sample = sample_ids,
 design
 ```
 
+Compute pseudo-bulk (PB) onbject needed for differential testing.
+```{r compute_PB_counts}
+PB_counts = compute_PB_counts(sce = sce,
+                              EC_list = EC_list,
+                              design =  design,
+                              sample_col_name = "sample",
+                              group_col_name = "group",
+                              sce_cluster_name = "cell_type")
+```
+
+NB: to reduce memory usage, we can remove the `EC_list` object, which typically requires a large amount of memory, particularly in large datasets.
+If needed, the `sce` object can be removed as well, as neither is needed for differential testing.
+```{r rm_EC_list}
+rm(EC_list)
+```
+
 ### USA testing
-To perform differential testing on USA esitmated counts, set `EC_list` to `NULL` (or leave it unspecified).
+To perform differential testing on USA esitmated counts, set `EC` to `FALSE`.
 ```{r sce-test}
 # sce-based test:
 set.seed(169612)
-results_USA = DifferentialRegulation(sce = sce,
-                                     EC_list = NULL,
-                                     design =  design,
-                                     sample_col_name = "sample",
-                                     group_col_name = "group",
-                                     sce_cluster_name = "cell_type")
+results_USA = DifferentialRegulation(PB_counts,
+                                     EC = FALSE)
 ```
 
 ### EC testing (recommended option)
-To perform differential testing on EC counts, we set `EC_list` to the object computed above via `load_EC`.
+To perform differential testing on EC counts, set `EC` to `FALSE` (default value).
 ```{r EC-test}
 # EC-based test:
 set.seed(169612)
-results_EC = DifferentialRegulation(sce = sce,
-                                    EC_list = EC_list,
-                                    design =  design,
-                                    sample_col_name = "sample",
-                                    group_col_name = "group",
-                                    sce_cluster_name = "cell_type")
+results_EC = DifferentialRegulation(PB_counts)
 ```
 
-### Visualizing results
+## Visualizing results
 In both USA and ECs approaches, `DifferentialRegulation` function returns of a list of 3 data.frames:
+
 - `Differential_results`, which contains results from differential testing only;
 - `US_results`, that has results for the proportion of Spliced and Unspliced counts (where Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
 - `USA_results`, which includses results for the proportion of Spliced, Unspliced and Ambiguous counts (Ambiguous counts are reported separately from Spliced and Unspliced counts).
@@ -182,49 +232,39 @@ names(results_EC)
 In `Differential_results` element, columns `Gene_id` and `Cluster_id` contain the gene and cell-cluster name,  while `p_val`, `p_adj.loc` and `p_adj.glb` report the raw p-values, locally and globally adjusted p-values, via Benjamini and Hochberg (BH) correction.
 In locally adjusted p-values (`p_adj.loc`) BH correction is applied to each cluster separately, while in globally adjusted p-values (`p_adj.glb`) BH correction is performed to the results from all clusters.
 ```{r visualize_gene_results}
-DR = results_EC$Differential_results
-# We can also sort results by significance, if we want, before visualizing them.
-DR = DR[ order(DR$p_val), ]
-head(DR)
+head(results_EC$Differential_results, 3)
 ```
 
-In `US_results` and `USA_results` elements, `pi` and `sd` indicate the proportion and standard deviation, respectively, `S`, `U` and `A` refer to Spliced, Unspliced and Ambiguous counts, respectively, while `gr_A` and `gr_B` refer to group A and B, respectively.
-For instance, columns `pi_S-gr_A` and `sd_S-gr_A` indicate the estimates and standard deviation (sd) for the proportion of Spliced (pi_S) and Unspliced (pi_U) counts in group A, respectively.
+In `US_results` and `USA_results` elements, `pi` and `sd` indicate the estimated proportion and standard deviation, respectively, `S`, `U` and `A` refer to Spliced, Unspliced and Ambiguous counts, respectively, while `3 mon` and `6 mon` refer to the groups, as named in the `design`.
+For instance, columns `pi_S-3 mon` and `sd_S-3 mon` indicate the estimate (posterior mean) and standard deviation (sd) for the proportion of Spliced (pi_S) and Unspliced (pi_U) counts in group `3 mon`, respectively.
 
 We visualize US results.
 ```{r visualize_US_results}
-US = results_EC$US_results
-# We can also sort results by significance, if we want, before visualizing them.
-US = US[ order(US$p_val), ]
-head(US)
+head(results_EC$US_results, 3)
 ```
 
 We visualize USA results.
 ```{r visualize_USA_results}
-USA = results_EC$USA_results
-# We can also sort results by significance, if we want, before visualizing them.
-USA = USA[ order(USA$p_val), ]
-head(USA)
+head(results_EC$USA_results, 3)
 ```
 
 Finally, we can plot the estimated proportions of spliced and unspliced reads.
 If `CI = TRUE` (default option), for each estimate, we can also add the respective profile Wald type confidence interval, of level `CI_level` (0.95 by default).
-Below, we visualize results for the most significant result (top of `DF` object, after ordering).
 
 Similarly to above, we can plot the proportion of US or USA reads.
 Note that, although US reads are easier to interpret, USA reads more closely reflect what is being compared between conditions.
 ```{r plot_pi}
 plot_pi(results_EC,
         type = "US",
-        gene_id = DR$Gene_id[1],
-        cluster_id = DR$Cluster_id[1])
+        gene_id = results_EC$Differential_results$Gene_id[1],
+        cluster_id = results_EC$Differential_results$Cluster_id[1])
 ```
 
 ```{r plot_pi_USA}
 plot_pi(results_EC,
         type = "USA",
-        gene_id = DR$Gene_id[1],
-        cluster_id = DR$Cluster_id[1])
+        gene_id = results_EC$Differential_results$Gene_id[1],
+        cluster_id = results_EC$Differential_results$Cluster_id[1])
 ```
 
 # Session info

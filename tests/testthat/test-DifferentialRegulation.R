@@ -31,16 +31,18 @@ test_that("DifferentialRegulation() works faultlessly.", {
   matches = match(colnames(sce), DF_cell_types$cell_id)
   sce$cell_type = DF_cell_types$cell_type[matches]
   
-  # sce-based test:
+  PB_counts = compute_PB_counts(sce = sce,
+                                EC_list = NULL,
+                                design =  design,
+                                sample_col_name = "sample",
+                                group_col_name = "group",
+                                sce_cluster_name = "cell_type",
+                                min_cells_per_cluster = 100, 
+                                min_counts_per_gene_per_group = 20)
+  
+  # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
   set.seed(169612)
-  results_USA = DifferentialRegulation(sce = sce,
-                                       EC_list = NULL,
-                                       design =  design,
-                                       sample_col_name = "sample",
-                                       group_col_name = "group",
-                                       sce_cluster_name = "cell_type",
-                                       min_cells_per_cluster = 100, 
-                                       min_counts_per_gene_per_group = 20)
+  results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
   
   expect_is(results_USA, "list")
   expect_is(results_USA[[1]], "data.frame")
