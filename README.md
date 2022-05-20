@@ -1,4 +1,4 @@
-# DifferentialRegulation: a method for differential analyses via hierarchical permutation tests
+# DifferentialRegulation: a method to discover differentially regulated genes between conditions
 
 `DifferentialRegulation` is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
 
