@@ -61,7 +61,7 @@ The $DM$ model is the main focus here, and the one which is used for differentia
 Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs), and differential testing is performed by comparing $(\pi_U, \pi_S, \pi_A)$ between conditions.
 
 ## Bioconductor installation
-`DifferentialRegulation` is available on [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/DifferentialRegulation.html) and can be installed with the command:
+`DifferentialRegulation` is available on [Bioconductor](https://bioconductor.org/packages/DifferentialRegulation) and can be installed with the command:
 ```{r Bioconductor_installation, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly=TRUE))
   install.packages("BiocManager")
