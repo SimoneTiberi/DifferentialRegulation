@@ -1,5 +1,7 @@
 # DifferentialRegulation: a method to discover differentially regulated genes between conditions
 
+<img src="inst/extdata/DifferentialRegulation.png" width="200" align="right"/> 
+
 `DifferentialRegulation` is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
 
 Check the vignettes for a description of the main conceptual and mathematical aspects, as well as usage guidelines.
