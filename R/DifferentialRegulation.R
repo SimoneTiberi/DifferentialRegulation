@@ -198,9 +198,15 @@ DifferentialRegulation = function(PB_counts,
     message("'n_cores' set to: ", n_cell_types)
     n_cores = n_cell_types
   }
+  
+  # check if n_cores is the same length as n_cell_types:
   if(n_cores != n_cell_types){
-    message("We detected ", n_cell_types, " cell clusters, while 'n_cores' was equal to, ", n_cores)
+    message("We detected ", n_cell_types, " cell clusters, while 'n_cores' was equal to ", n_cores)
     message("Since tasks are paralellized on cell clusters, we recommend setting 'n_cores' to the number of clusters")
+    
+    cores_equal_clusters = FALSE
+  }else{
+    cores_equal_clusters = TRUE
   }
   
   cl = makeCluster(n_cores, setup_strategy = "sequential")
@@ -210,39 +216,63 @@ DifferentialRegulation = function(PB_counts,
   # run MCMC in parallel:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   if(EC){
-    RES = MCMC_ECs(PB_data_prepared,
-                   min_counts_per_gene_per_group,
-                   N_MCMC,
-                   burn_in,
-                   min_counts_ECs,
-                   n_samples,
-                   n_samples_per_group,
-                   numeric_groups,
-                   genes,
-                   cl,
-                   cluster_ids_kept,
-                   sample_ids_per_group,
-                   n_groups,
-                   gene_ids_sce,
-                   n_genes,
-                   list_EC_gene_id,
-                   list_EC_USA_id)
+    RESULTS = MCMC_ECs(PB_data_prepared,
+                       min_counts_per_gene_per_group,
+                       N_MCMC,
+                       burn_in,
+                       min_counts_ECs,
+                       n_samples,
+                       n_samples_per_group,
+                       numeric_groups,
+                       genes,
+                       cl,
+                       cluster_ids_kept,
+                       sample_ids_per_group,
+                       n_groups,
+                       gene_ids_sce,
+                       n_genes,
+                       list_EC_gene_id,
+                       list_EC_USA_id,
+                       cores_equal_clusters)
   }else{
-    RES = MCMC_USA(PB_data_prepared,
-                   min_counts_per_gene_per_group,
-                   N_MCMC,
-                   burn_in,
-                   n_samples,
-                   n_samples_per_group,
-                   numeric_groups,
-                   cl,
-                   cluster_ids_kept,
-                   sample_ids_per_group,
-                   n_groups,
-                   gene_ids_sce)
+    RESULTS = MCMC_USA(PB_data_prepared,
+                       min_counts_per_gene_per_group,
+                       N_MCMC,
+                       burn_in,
+                       n_samples,
+                       n_samples_per_group,
+                       numeric_groups,
+                       cl,
+                       cluster_ids_kept,
+                       sample_ids_per_group,
+                       n_groups,
+                       gene_ids_sce,
+                       cores_equal_clusters)
   }
+  
+  #Error in { : task 5 failed - "object 'PB_data_prepared' not found"
+    
   stopCluster(cl) 
   stopImplicitCluster()
+  
+  # separate
+  RES = RESULTS[[1]]
+  Convergence_results = RESULTS[[2]]
+  rm(RESULTS)
+  
+  # CHECK if ALL NULL (if all clusters return null):
+  if(is.null(RES)){
+    message("Results are all NULL. This may be due to:")
+    message("i) failure of convergence (check 'Convergence_results' object), or")
+    message("ii) no gene-cluster combinations passing the minimum expression thresholds.")
+    
+    res = list( Differential_results = NULL,
+                US_results = NULL,
+                USA_results = NULL,
+                Convergence_results = Convergence_results)
+    
+    return(res)
+  }
   
   # Replace group names, with those provided in design
   names = colnames(RES)
@@ -260,7 +290,8 @@ DifferentialRegulation = function(PB_counts,
   
   res = list( Differential_results = RES[, seq_len(5)],
               US_results = RES[, seq_len(13)],
-              USA_results = RES[, c(seq.int(1,5,by = 1),seq.int(14,25,by = 1))] )
+              USA_results = RES[, c(seq.int(1,5,by = 1),seq.int(14,25,by = 1))],
+              Convergence_results = Convergence_results)
   
   res
 }

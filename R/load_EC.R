@@ -121,6 +121,8 @@ load_EC = function(path_to_EC_counts,
     
     n_genes = length(gene_id)/3
     gene_id_list[[i]] = gene_id
+    # only keep gene ids (first n_genes elements), not its repetition with -U (second n_genes elements) and -A (third n_genes elements):
+    gene_id_list[[i]] = gene_id_list[[i]][seq_len(n_genes)]
     
     EC_USA_type = c( rep("S", n_genes),  rep("U", n_genes), rep("A", n_genes) )
     

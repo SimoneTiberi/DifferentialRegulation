@@ -9,7 +9,8 @@ MCMC_USA = function(PB_data_prepared,
                     cluster_ids_kept,
                     sample_ids_per_group,
                     n_groups,
-                    gene_ids_sce
+                    gene_ids_sce,
+                    cores_equal_clusters
 ){
   # compute overall counts per cluster -> use this to rank highly abundant clusters first (likely more computationally intensive).
   overall_counts = vapply(PB_data_prepared, function(x){
@@ -31,8 +32,12 @@ MCMC_USA = function(PB_data_prepared,
                            U = PB_data_prepared[[cl]][[3]]
                            A = PB_data_prepared[[cl]][[4]]
                            
-                           rm(PB_data_prepared)
-                           
+                           if(cores_equal_clusters){
+                             rm(PB_data_prepared)
+                           }else{
+                             PB_data_prepared[[cl]] = NULL
+                           }
+
                            SUA = list()
                            for(i in seq_len(n_samples)){
                              SUA[[i]] = cbind(S[,i], U[,i], A[,i])
@@ -163,6 +168,9 @@ MCMC_USA = function(PB_data_prepared,
                              convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
                              rm(res)
                              
+                             # set convergence (over-written below if it did not converge)
+                             first = "converged"; second = "not run (1st chain converged)"
+                             
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
                                message("Our MCMC did not converge (according to Heidelberger and Welch's convergence diagnostic):
                                        we will now double 'N_MCMC' and 'burn_in', and run it a second time.")
@@ -222,9 +230,23 @@ MCMC_USA = function(PB_data_prepared,
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
+                                 first = "NOT converged"; second = "NOT converged"
+                                 
+                                 # create convergence DF:
+                                 DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
+                                                             burn_in = NA,
+                                                             N_MCMC = N_MCMC,
+                                                             first_chain = first,
+                                                             second_chain = second)
+                                 
                                  message("Our algorithm did not converged, try to increase N_MCMC.")
-                                 return(NULL)
+                                 
+                                 return(list(NULL,
+                                             DF_convergence))
                                }
+                               
+                               # if 2nd chain converged:
+                               first = "NOT converged"; second = "converged"
                              }
                              
                              message("MCMC completed and successfully converged.")
@@ -232,6 +254,13 @@ MCMC_USA = function(PB_data_prepared,
                              # the code below, is only run if either chain has converged:
                              # increase the burn-in IF detected by "my_heidel_diag" (max burn-in = half of the chain length):
                              burn_in = max(convergence[2]-1, burn_in)
+                             
+                             # create convergence DF:
+                             DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
+                                                         burn_in = burn_in,
+                                                         N_MCMC = N_MCMC,
+                                                         first_chain = first,
+                                                         second_chain = second)
                              
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # compute p-value:
@@ -266,40 +295,55 @@ MCMC_USA = function(PB_data_prepared,
                                               p_vals[,-1])
                              
                              colnames(RES)[-c(seq_len(5))] = c("pi_S-gr_A",
-                                                        "pi_U-gr_A",
-                                                        "pi_S-gr_B",
-                                                        "pi_U-gr_B",
-                                                        "sd_S-gr_A",
-                                                        "sd_U-gr_A",
-                                                        "sd_S-gr_B",
-                                                        "sd_U-gr_B",
-                                                        "pi_S-gr_A",
-                                                        "pi_U-gr_A",
-                                                        "pi_A-gr_A",
-                                                        "pi_S-gr_B",
-                                                        "pi_U-gr_B",
-                                                        "pi_A-gr_B",
-                                                        "sd_S-gr_A",
-                                                        "sd_U-gr_A",
-                                                        "sd_A-gr_A",
-                                                        "sd_S-gr_B",
-                                                        "sd_U-gr_B",
-                                                        "sd_A-gr_B")
+                                                               "pi_U-gr_A",
+                                                               "pi_S-gr_B",
+                                                               "pi_U-gr_B",
+                                                               "sd_S-gr_A",
+                                                               "sd_U-gr_A",
+                                                               "sd_S-gr_B",
+                                                               "sd_U-gr_B",
+                                                               "pi_S-gr_A",
+                                                               "pi_U-gr_A",
+                                                               "pi_A-gr_A",
+                                                               "pi_S-gr_B",
+                                                               "pi_U-gr_B",
+                                                               "pi_A-gr_B",
+                                                               "sd_S-gr_A",
+                                                               "sd_U-gr_A",
+                                                               "sd_A-gr_A",
+                                                               "sd_S-gr_B",
+                                                               "sd_U-gr_B",
+                                                               "sd_A-gr_B")
                            }else{ # if n_genes_keep == 0
                              RES = NULL
+                             DF_convergence = NULL
                            }
-                           return(RES)
+                           return(list(RES,
+                                       DF_convergence))
                          }
   
   # merge results from multiple clusters, only if available
   if(length(order) > 1){
-    RES = do.call(rbind, p_values_ALL)
+    p_values_ALL_test = lapply(p_values_ALL, function(X){ # 1st element contains DR test
+      X[[1]]
+    })
+    p_values_ALL_convergence = lapply(p_values_ALL, function(X){ # 2nd element contains convergence results
+      X[[2]]
+    })
+    
+    RES = do.call(rbind, p_values_ALL_test)
+    
+    convergence_results = do.call(rbind, p_values_ALL_convergence)
   }else{
     RES = p_values_ALL[[1]]
+    convergence_results = p_values_ALL[[2]]
   }
   
-  # adjust p-values GLOBALLY:
-  RES$p_adj.glb = p.adjust(RES$p_val, method = "BH")
+  # CHECK if ALL NULL (if all clusters return null):
+  if(!is.null(RES)){
+    # adjust p-values GLOBALLY:
+    RES$p_adj.glb = p.adjust(RES$p_val, method = "BH")
+  }
   
   # create a final table of results, like in distinct.
   RES
