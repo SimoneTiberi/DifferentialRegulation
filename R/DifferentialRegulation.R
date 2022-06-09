@@ -21,12 +21,13 @@
 #' If our algorithm does not converge even after increasing the burn-in, 
 #' we automatically double N_MCMC and burn_in, and run it a second time (a message will be printed on screen to inform users).
 #' 
-#' @return A \code{list} of 3 \code{data.frame} objects.
+#' @return A \code{list} of 4 \code{data.frame} objects.
 #' 'Differential_results' contains results from differential testing only;
 #' 'US_results' has results for the proportion of Spliced and Unspliced counts 
 #' (Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
-#' 'USA_results' has results for the proportion of Spliced, Unspliced and Ambiguous counts 
-#' (Ambiguous counts are reported separately from Spliced and Unspliced counts).
+#' 'USA_results' includes results for the proportion of Spliced, Unspliced and Ambiguous counts 
+#' (Ambiguous counts are reported separately from Spliced and Unspliced counts);
+#' 'Convergence_results' contains information about convergence of posterior chains.
 #' Columns 'Gene_id' and 'Cluster_id' contain the gene and cell-cluster name, 
 #' while 'p_val', 'p_adj.loc' and 'p_adj.glb' report the raw p-values, locally and globally adjusted p-values, 
 #' via Benjamini and Hochberg (BH) correction.
@@ -181,8 +182,8 @@ DifferentialRegulation = function(PB_counts,
     message("We recommend using equivalence classes counts (slower, but marginally more accurate).")
   }else{
     min_counts_ECs = PB_counts[[12]]
-    list_EC_gene_id = PB_counts[[13]]
-    list_EC_USA_id = PB_counts[[14]]
+    list_EC_gene_id_original = PB_counts[[13]]
+    list_EC_USA_id_original = PB_counts[[14]]
     genes = PB_counts[[15]]
     n_genes = PB_counts[[16]]
   }
@@ -200,7 +201,7 @@ DifferentialRegulation = function(PB_counts,
   }
   
   # check if n_cores is the same length as n_cell_types:
-  if(n_cores != n_cell_types){
+  if(n_cores < n_cell_types){
     message("We detected ", n_cell_types, " cell clusters, while 'n_cores' was equal to ", n_cores)
     message("Since tasks are paralellized on cell clusters, we recommend setting 'n_cores' to the number of clusters")
     
@@ -209,8 +210,8 @@ DifferentialRegulation = function(PB_counts,
     cores_equal_clusters = TRUE
   }
   
-  cl = makeCluster(n_cores, setup_strategy = "sequential")
-  registerDoParallel(cl, n_cores)
+  cluster = makeCluster(n_cores, setup_strategy = "sequential")
+  registerDoParallel(cluster, n_cores)
   
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run MCMC in parallel:
@@ -225,14 +226,14 @@ DifferentialRegulation = function(PB_counts,
                        n_samples_per_group,
                        numeric_groups,
                        genes,
-                       cl,
+                       cluster,
                        cluster_ids_kept,
                        sample_ids_per_group,
                        n_groups,
                        gene_ids_sce,
                        n_genes,
-                       list_EC_gene_id,
-                       list_EC_USA_id,
+                       list_EC_gene_id_original,
+                       list_EC_USA_id_original,
                        cores_equal_clusters)
   }else{
     RESULTS = MCMC_USA(PB_data_prepared,
@@ -242,7 +243,7 @@ DifferentialRegulation = function(PB_counts,
                        n_samples,
                        n_samples_per_group,
                        numeric_groups,
-                       cl,
+                       cluster,
                        cluster_ids_kept,
                        sample_ids_per_group,
                        n_groups,
@@ -252,7 +253,7 @@ DifferentialRegulation = function(PB_counts,
   
   #Error in { : task 5 failed - "object 'PB_data_prepared' not found"
     
-  stopCluster(cl) 
+  stopCluster(cluster) 
   stopImplicitCluster()
   
   # separate

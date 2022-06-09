@@ -220,11 +220,13 @@ results_EC = DifferentialRegulation(PB_counts)
 ```
 
 ## Visualizing results
-In both USA and ECs approaches, `DifferentialRegulation` function returns of a list of 3 data.frames:
+In both USA and ECs approaches, `DifferentialRegulation` function returns of a list of 4 data.frames:
 
 - `Differential_results`, which contains results from differential testing only;
 - `US_results`, that has results for the proportion of Spliced and Unspliced counts (where Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
-- `USA_results`, which includses results for the proportion of Spliced, Unspliced and Ambiguous counts (Ambiguous counts are reported separately from Spliced and Unspliced counts).
+- `USA_results`, which includes results for the proportion of Spliced, Unspliced and Ambiguous counts (Ambiguous counts are reported separately from Spliced and Unspliced counts);
+- `Convergence_results`, that contains information about convergence of posterior chains.
+
 ```{r names-results}
 names(results_EC)
 ```
@@ -246,6 +248,11 @@ head(results_EC$US_results, 3)
 We visualize USA results.
 ```{r visualize_USA_results}
 head(results_EC$USA_results, 3)
+```
+
+We can also visualize information about the convergence of the posterior chains.
+```{r visualize_convergence_results}
+results_EC$Convergence_results
 ```
 
 Finally, we can plot the estimated proportions of spliced and unspliced reads.

@@ -7,14 +7,14 @@ MCMC_ECs = function(PB_data_prepared,
                     n_samples_per_group,
                     numeric_groups,
                     genes,
-                    cl,
+                    cluster,
                     cluster_ids_kept,
                     sample_ids_per_group,
                     n_groups,
                     gene_ids_sce,
                     n_genes,
-                    list_EC_gene_id,
-                    list_EC_USA_id,
+                    list_EC_gene_id_original,
+                    list_EC_USA_id_original,
                     cores_equal_clusters
 ){
   # compute overall counts per cluster -> use this to rank highly abundant clusters first (likely more computationally intensive).
@@ -31,8 +31,11 @@ MCMC_ECs = function(PB_data_prepared,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   p_values_ALL = foreach(cl = order,
                          # maybe only via R package
-                         .packages=c("DifferentialRegulation"),
+                         .packages=c("DifferentialRegulation", "BANDITS", "MASS"),
                          .errorhandling = "stop") %dorng%{
+                           
+                           N_MCMC_one_cl = N_MCMC
+                           burn_in_one_cl = burn_in
                            
                            counts = PB_data_prepared[[cl]][[1]]
                            S = PB_data_prepared[[cl]][[2]]
@@ -42,11 +45,18 @@ MCMC_ECs = function(PB_data_prepared,
                            if(cores_equal_clusters){
                              rm(PB_data_prepared)
                            }else{
-                             PB_data_prepared[[cl]] = NULL
+                             PB_data_prepared[[cl]] = 1
                            }
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                            # separate uniquely mapping ECs:
                            #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+                           list_EC_gene_id = list_EC_gene_id_original
+                           list_EC_USA_id = list_EC_USA_id_original
+                           if(cores_equal_clusters){
+                             rm(list_EC_gene_id_original)
+                             rm(list_EC_USA_id_original)
+                           }
+                           
                            list_X_unique = list()
                            
                            # separate uniquely mapping ECs:
@@ -57,6 +67,8 @@ MCMC_ECs = function(PB_data_prepared,
                              # unique bool vector indicating uniquely mapping ECs.
                              n_EC = length(list_EC_gene_id[[sample]])
                              unique = rep(FALSE, n_EC)
+                             
+                             SU_id = sel = c()
                              
                              for(ec in seq_len(n_EC)){
                                gene_id = list_EC_gene_id[[sample]][[ec]] + 1
@@ -143,7 +155,11 @@ MCMC_ECs = function(PB_data_prepared,
                              x[matches,] #
                            })
                            
-                           rm(matches); rm(genes)
+                           rm(matches)
+                           
+                           if(cores_equal_clusters){
+                             rm(genes)
+                           }
                            
                            n_genes_non_zero = length(genes_non_zero)
                            
@@ -224,7 +240,10 @@ MCMC_ECs = function(PB_data_prepared,
                              
                              gene_id_SUA = gene_ids_sce[keep_sce]
                              
-                             rm(keep_sce); rm(sel_genes_random); rm(gene_ids_sce)
+                             rm(keep_sce); rm(sel_genes_random)
+                             if(cores_equal_clusters){
+                               rm(gene_ids_sce)
+                             }
                              
                              S_U_A = rbind(S, U, A)
                              
@@ -243,10 +262,18 @@ MCMC_ECs = function(PB_data_prepared,
                              
                              rm(gene_2_tr); rm(S_U_A)
                              
+                             # if NA or NULL or Inf, use vaguely informative values:
+                             if(is.na(precision[1]) | is.infinite(precision[1]) | is.null(precision[1])){
+                               precision[1] = 3
+                             }
+                             if(is.na(precision[2]) | is.infinite(precision[2]) | is.null(precision[2])){
+                               precision[2] = 10
+                             }
+                             
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # initialize objects:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             # TODO: if N_MCMC large -> use thinnings
+                             # TODO: if N_MCMC_one_cl large -> use thinnings
                              MCMC_bar_pi_1 = lapply(seq_len(n_groups), matrix, data = 1, nrow = 2, ncol= 2)
                              MCMC_bar_pi_2 = lapply(seq_len(n_groups), matrix, data = 1, nrow = 2, ncol= 2)
                              MCMC_bar_pi_3 = lapply(seq_len(n_groups), matrix, data = 1, nrow = 2, ncol= 2)
@@ -273,48 +300,48 @@ MCMC_ECs = function(PB_data_prepared,
                              message("Starting the MCMC")
                              
                              res = .Call(`_DifferentialRegulation_Rcpp_MCMC`,
-                                         n_samples, # N samples
-                                         n_genes_non_zero, # N genes_non_zero
-                                         n_groups, # N groups
-                                         n_genes_keep, # number of genes_non_zero to be analyzed.
-                                         keep_genes_id-1, # vector indicating genes_non_zero to be analyzed (SU differential testing)
-                                         numeric_groups - 1, # -1 ! # group id for every sample (must start from 0)
-                                         sample_ids_per_group, # each list = vector with ids of samples 
-                                         n_samples_per_group,
-                                         N_MCMC, # MCMC iter
-                                         burn_in, # burn-in
-                                         PI_gene, # prob of each gene (for every sample)
-                                         PI_SU, # prob of each gene (for every sample)
-                                         list_X_unique, # SU uniquely mapping counts
-                                         list_EC_gene_id, # SU uniquely mapping counts
-                                         list_EC_USA_id, # TRUE -> S; FALSE -> U
-                                         counts, # EC counts (integers)
-                                         MCMC_bar_pi_1,
-                                         MCMC_bar_pi_2,
-                                         MCMC_bar_pi_3,
-                                         chol,
-                                         delta_SU,
-                                         TRUE, # I ALWAYS USE THE PRIOR
-                                         precision[1],
-                                         precision[2], 
-                                         2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
+                                 n_samples, # N samples
+                                 n_genes_non_zero, # N genes_non_zero
+                                 n_groups, # N groups
+                                 n_genes_keep, # number of genes_non_zero to be analyzed.
+                                 keep_genes_id-1, # vector indicating genes_non_zero to be analyzed (SU differential testing)
+                                 numeric_groups - 1, # -1 ! # group id for every sample (must start from 0)
+                                 sample_ids_per_group, # each list = vector with ids of samples 
+                                 n_samples_per_group,
+                                 N_MCMC_one_cl, # MCMC iter
+                                 burn_in_one_cl, # burn-in
+                                 PI_gene, # prob of each gene (for every sample)
+                                 PI_SU, # prob of each gene (for every sample)
+                                 list_X_unique, # SU uniquely mapping counts
+                                 list_EC_gene_id, # SU uniquely mapping counts
+                                 list_EC_USA_id, # TRUE -> S; FALSE -> U
+                                 counts, # EC counts (integers)
+                                 MCMC_bar_pi_1,
+                                 MCMC_bar_pi_2,
+                                 MCMC_bar_pi_3,
+                                 chol,
+                                 delta_SU,
+                                 TRUE, # I ALWAYS USE THE PRIOR
+                                 precision[1],
+                                 precision[2], 
+                                 2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
                              rm(res)
                              
                              # set convergence (over-written below if it did not converge)
-                             first = "converged"; second = NULL   
+                             first = "converged"; second = "NOT run (1st chain converged)"
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
                                rm(convergence)
                                
                                message("Our MCMC did not converge (according to Heidelberger and Welch's convergence diagnostic):
-                                       we will now double 'N_MCMC' and 'burn_in', and run it a second time.")
+                                       we will now double 'N_MCMC_one_cl' and 'burn_in_one_cl', and run it a second time.")
                                
-                               N_MCMC = 2 * N_MCMC
-                               burn_in = 2 * burn_in
+                               N_MCMC_one_cl = 2 * N_MCMC_one_cl
+                               burn_in_one_cl = 2 * burn_in_one_cl
                                
                                # re-initialize objects:
                                MCMC_bar_pi_1 = lapply(seq_len(n_groups), matrix, data = 1, nrow = 2, ncol= 2)
@@ -352,8 +379,8 @@ MCMC_ECs = function(PB_data_prepared,
                                            numeric_groups - 1, # -1 ! # group id for every sample (must start from 0)
                                            sample_ids_per_group, # each list = vector with ids of samples 
                                            n_samples_per_group,
-                                           N_MCMC, # MCMC iter
-                                           burn_in, # burn-in
+                                           N_MCMC_one_cl, # MCMC iter
+                                           burn_in_one_cl, # burn-in
                                            PI_gene, # prob of each gene (for every sample)
                                            PI_SU, # prob of each gene (for every sample)
                                            list_X_unique, # SU uniquely mapping counts
@@ -370,7 +397,7 @@ MCMC_ECs = function(PB_data_prepared,
                                            precision$prior[2], 
                                            2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                                
-                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
@@ -378,12 +405,12 @@ MCMC_ECs = function(PB_data_prepared,
                                  
                                  # create convergence DF:
                                  DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                             burn_in = NA,
-                                                             N_MCMC = N_MCMC,
+                                                             burn_in_one_cl = NA,
+                                                             N_MCMC_one_cl = N_MCMC_one_cl,
                                                              first_chain = first,
                                                              second_chain = second)
                                  
-                                 message("Our algorithm did not converged, try to increase N_MCMC.")
+                                 message("Our algorithm did not converged, try to increase N_MCMC_one_cl.")
                                  
                                  return(list(NULL,
                                              DF_convergence))
@@ -393,22 +420,24 @@ MCMC_ECs = function(PB_data_prepared,
                                first = "NOT converged"; second = "converged"
                              }
                              
+                             rm(list_EC_gene_id); rm(list_EC_USA_id)
+                             
                              message("MCMC completed and successfully converged.")
                              
                              # the code below, is only run if either chain has converged:
                              # increase the burn-in IF detected by "my_heidel_diag" (max burn-in = half of the chain length):
-                             burn_in = max(convergence[2]-1, burn_in)
+                             burn_in_one_cl = max(convergence[2]-1, burn_in_one_cl)
                              
                              # create convergence DF:
                              DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                         burn_in = burn_in,
-                                                         N_MCMC = N_MCMC,
+                                                         burn_in_one_cl = burn_in_one_cl,
+                                                         N_MCMC_one_cl = N_MCMC_one_cl,
                                                          first_chain = first,
                                                          second_chain = second)
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # compute p-value:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
+                             sel = seq.int(from = burn_in_one_cl +1, to = N_MCMC_one_cl, by = 1)
                              p_vals = t(vapply(seq_len(n_genes_keep), function(gene_id){
                                a = MCMC_bar_pi_1[[1]][sel,gene_id]
                                b = MCMC_bar_pi_2[[1]][sel,gene_id]
@@ -489,5 +518,5 @@ MCMC_ECs = function(PB_data_prepared,
   }
   
   # create a final table of results, like in distinct.
-  RES
+  list(RES, convergence_results)
 }

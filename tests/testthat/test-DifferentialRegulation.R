@@ -48,4 +48,5 @@ test_that("DifferentialRegulation() works faultlessly.", {
   expect_is(results_USA[[1]], "data.frame")
   expect_is(results_USA[[2]], "data.frame")
   expect_is(results_USA[[3]], "data.frame")
+  expect_is(results_USA[[4]], "data.frame")
 })

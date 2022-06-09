@@ -34,12 +34,13 @@ If our algorithm does not converge even after increasing the burn-in,
 we automatically double N_MCMC and burn_in, and run it a second time (a message will be printed on screen to inform users).}
 }
 \value{
-A \code{list} of 3 \code{data.frame} objects.
+A \code{list} of 4 \code{data.frame} objects.
 'Differential_results' contains results from differential testing only;
 'US_results' has results for the proportion of Spliced and Unspliced counts 
 (Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
-'USA_results' has results for the proportion of Spliced, Unspliced and Ambiguous counts 
-(Ambiguous counts are reported separately from Spliced and Unspliced counts).
+'USA_results' includes results for the proportion of Spliced, Unspliced and Ambiguous counts 
+(Ambiguous counts are reported separately from Spliced and Unspliced counts);
+'Convergence_results' contains information about convergence of posterior chains.
 Columns 'Gene_id' and 'Cluster_id' contain the gene and cell-cluster name, 
 while 'p_val', 'p_adj.loc' and 'p_adj.glb' report the raw p-values, locally and globally adjusted p-values, 
 via Benjamini and Hochberg (BH) correction.

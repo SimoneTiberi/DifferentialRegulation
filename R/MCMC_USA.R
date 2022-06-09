@@ -5,7 +5,7 @@ MCMC_USA = function(PB_data_prepared,
                     n_samples,
                     n_samples_per_group,
                     numeric_groups,
-                    cl,
+                    cluster,
                     cluster_ids_kept,
                     sample_ids_per_group,
                     n_groups,
@@ -28,6 +28,9 @@ MCMC_USA = function(PB_data_prepared,
                          .packages=c("DifferentialRegulation"),
                          .errorhandling = "stop") %dorng%{
                            
+                           N_MCMC_one_cl = N_MCMC
+                           burn_in_one_cl = burn_in
+                           
                            S = PB_data_prepared[[cl]][[2]]
                            U = PB_data_prepared[[cl]][[3]]
                            A = PB_data_prepared[[cl]][[4]]
@@ -35,9 +38,9 @@ MCMC_USA = function(PB_data_prepared,
                            if(cores_equal_clusters){
                              rm(PB_data_prepared)
                            }else{
-                             PB_data_prepared[[cl]] = NULL
+                             PB_data_prepared[[cl]] = 1
                            }
-
+                           
                            SUA = list()
                            for(i in seq_len(n_samples)){
                              SUA[[i]] = cbind(S[,i], U[,i], A[,i])
@@ -107,6 +110,14 @@ MCMC_USA = function(PB_data_prepared,
                              
                              rm(gene_2_tr); rm(S_U_A)
                              
+                             # if NA or NULL or Inf, use vaguely informative values:
+                             if(is.na(precision[1]) | is.infinite(precision[1]) | is.null(precision[1])){
+                               precision[1] = 3
+                             }
+                             if(is.na(precision[2]) | is.infinite(precision[2]) | is.null(precision[2])){
+                               precision[2] = 10
+                             }
+                             
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # initialize objects:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -148,8 +159,8 @@ MCMC_USA = function(PB_data_prepared,
                                          numeric_groups - 1, # -1 ! # groups id for every sample (must start from 0)
                                          sample_ids_per_group, # each list = vector with ids of samples 
                                          n_samples_per_group,
-                                         N_MCMC, # MCMC iter
-                                         burn_in, # burn-in
+                                         N_MCMC_one_cl, # MCMC iter
+                                         burn_in_one_cl, # burn-in
                                          PI_SU, # prob of each gene (for every sample)
                                          SUA, # SU uniquely mapping counts
                                          MCMC_bar_pi_1,
@@ -165,18 +176,18 @@ MCMC_USA = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
                              rm(res)
                              
                              # set convergence (over-written below if it did not converge)
-                             first = "converged"; second = "not run (1st chain converged)"
+                             first = "converged"; second = "NOT run (1st chain converged)"
                              
                              if(convergence[1] == 0){ # if not converged, reset starting values and run a second chain (twice as long as the initial one):
                                message("Our MCMC did not converge (according to Heidelberger and Welch's convergence diagnostic):
-                                       we will now double 'N_MCMC' and 'burn_in', and run it a second time.")
+                                       we will now double 'N_MCMC_one_cl' and 'burn_in_one_cl', and run it a second time.")
                                
-                               N_MCMC = 2 * N_MCMC
-                               burn_in = 2 * burn_in
+                               N_MCMC_one_cl = 2 * N_MCMC_one_cl
+                               burn_in_one_cl = 2 * burn_in_one_cl
                                
                                # re-initialize objects:
                                MCMC_bar_pi_1 = lapply(seq_len(n_groups), matrix, data = 1, nrow = 2, ncol= 2)
@@ -212,8 +223,8 @@ MCMC_USA = function(PB_data_prepared,
                                            numeric_groups - 1, # -1 ! # groups id for every sample (must start from 0)
                                            sample_ids_per_group, # each list = vector with ids of samples 
                                            n_samples_per_group,
-                                           N_MCMC, # MCMC iter
-                                           burn_in, # burn-in
+                                           N_MCMC_one_cl, # MCMC iter
+                                           burn_in_one_cl, # burn-in
                                            PI_SU, # prob of each gene (for every sample)
                                            SUA, # SU uniquely mapping counts
                                            MCMC_bar_pi_1,
@@ -226,7 +237,7 @@ MCMC_USA = function(PB_data_prepared,
                                            precision[2], 
                                            2)
                                
-                               convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
@@ -234,12 +245,12 @@ MCMC_USA = function(PB_data_prepared,
                                  
                                  # create convergence DF:
                                  DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                             burn_in = NA,
-                                                             N_MCMC = N_MCMC,
+                                                             burn_in_one_cl = NA,
+                                                             N_MCMC_one_cl = N_MCMC_one_cl,
                                                              first_chain = first,
                                                              second_chain = second)
                                  
-                                 message("Our algorithm did not converged, try to increase N_MCMC.")
+                                 message("Our algorithm did not converged, try to increase N_MCMC_one_cl.")
                                  
                                  return(list(NULL,
                                              DF_convergence))
@@ -253,19 +264,19 @@ MCMC_USA = function(PB_data_prepared,
                              
                              # the code below, is only run if either chain has converged:
                              # increase the burn-in IF detected by "my_heidel_diag" (max burn-in = half of the chain length):
-                             burn_in = max(convergence[2]-1, burn_in)
+                             burn_in_one_cl = max(convergence[2]-1, burn_in_one_cl)
                              
                              # create convergence DF:
                              DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                         burn_in = burn_in,
-                                                         N_MCMC = N_MCMC,
+                                                         burn_in_one_cl = burn_in_one_cl,
+                                                         N_MCMC_one_cl = N_MCMC_one_cl,
                                                          first_chain = first,
                                                          second_chain = second)
                              
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # compute p-value:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
+                             sel = seq.int(from = burn_in_one_cl +1, to = N_MCMC_one_cl, by = 1)
                              p_vals = t(vapply(seq_len(n_genes_keep), function(gene_id){
                                a = MCMC_bar_pi_1[[1]][sel,gene_id]
                                b = MCMC_bar_pi_2[[1]][sel,gene_id]
@@ -345,6 +356,5 @@ MCMC_USA = function(PB_data_prepared,
     RES$p_adj.glb = p.adjust(RES$p_val, method = "BH")
   }
   
-  # create a final table of results, like in distinct.
-  RES
+  list(RES, convergence_results)
 }
