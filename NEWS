@@ -1,3 +1,6 @@
+Changes in version 1.0.6:
++ bug giving error (in plot_pi function) fixed
+
 Changes in version 1.0.5:
 + information about convergence added (in DifferentialRegulation function)
 
