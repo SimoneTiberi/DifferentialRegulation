@@ -1,3 +1,6 @@
+Changes in version 1.0.7:
++ bug (prompting when analyzing 1 cluster only) in DifferentialRegulation function fixed
+
 Changes in version 1.0.6:
 + bug giving error (in plot_pi function) fixed
 

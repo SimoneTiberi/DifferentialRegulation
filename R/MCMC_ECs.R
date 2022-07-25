@@ -507,8 +507,8 @@ MCMC_ECs = function(PB_data_prepared,
     
     convergence_results = do.call(rbind, p_values_ALL_convergence)
   }else{
-    RES = p_values_ALL[[1]]
-    convergence_results = p_values_ALL[[2]]
+    RES = p_values_ALL[[1]][[1]]
+    convergence_results = p_values_ALL[[1]][[2]]
   }
   
   # CHECK if ALL NULL (if all clusters return null):
