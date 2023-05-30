@@ -15,8 +15,10 @@ MCMC_ECs = function(PB_data_prepared,
                     n_genes,
                     list_EC_gene_id_original,
                     list_EC_USA_id_original,
-                    cores_equal_clusters
-){
+                    cores_equal_clusters,
+                    undersampling_int,
+                    n_cores,
+                    c_prop){
   # compute overall counts per cluster -> use this to rank highly abundant clusters first (likely more computationally intensive).
   overall_counts = vapply(PB_data_prepared, function(x){
     sum( unlist(x[[1]]) )
@@ -31,7 +33,7 @@ MCMC_ECs = function(PB_data_prepared,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   p_values_ALL = foreach(cl = order,
                          # maybe only via R package
-                         .packages=c("DifferentialRegulation", "BANDITS", "MASS"),
+                         .packages=c("DifferentialRegulation"),
                          .errorhandling = "stop") %dorng%{
                            
                            N_MCMC_one_cl = N_MCMC
@@ -222,53 +224,73 @@ MCMC_ECs = function(PB_data_prepared,
                            
                            if(n_genes_keep > 0){ # if at least 1 gene is selected:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             # DRIMSeq prior:
+                             # pi_S and pi_U prior:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             # Infer pseudo-bulk counts:
-                             sel_genes_random = sample(sel_genes, min(10^2, length(sel_genes)), replace = FALSE)
-                             
-                             keep_sce = gene_ids_sce %in% sel_genes_random
+                             # keep genes that we actually analyze  (sel_genes)
+                             keep_sce = gene_ids_sce %in% sel_genes
                              
                              S = S[keep_sce,]
                              U = U[keep_sce,]
                              A = A[keep_sce,]
                              
-                             #summary(rowSums(S + U + A))
-                             # should be > min selected above!!!
-                             
-                             # compute prior for the dispersion via DRIMSeq, based on the selected genes_non_zero only!
-                             
                              gene_id_SUA = gene_ids_sce[keep_sce]
                              
-                             rm(keep_sce); rm(sel_genes_random)
+                             rm(keep_sce);
+                             
+                             #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+                             # DRIMSeq prior:
+                             #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              if(cores_equal_clusters){
                                rm(gene_ids_sce)
                              }
                              
+                             # remove genes with 0 in at least S, U or A
+                             # check that dispersion is 0 for those cases...
+                             # ...maybe enough that 2 are non-zero to obtain dispersion estimates?
+                             sel_non_zeros = (rowSums(S) > 0) & (rowSums(U) > 0) & (rowSums(A) > 0)
+                             S = S[sel_non_zeros,]
+                             U = U[sel_non_zeros,]
+                             A = A[sel_non_zeros,]
+                             
                              S_U_A = rbind(S, U, A)
                              
-                             rm(S); rm(U); rm(A);
-                             
-                             gene_2_tr = data.frame(gene_id = rep(gene_id_SUA, 3),
-                                                    transcript_id = c(paste(gene_id_SUA, "S"), 
-                                                                      paste(gene_id_SUA, "U"), 
-                                                                      paste(gene_id_SUA, "A") ))
+                             gene_2_tr = data.frame(gene_id = rep(gene_id_SUA[sel_non_zeros], 3),
+                                                    transcript_id = c(paste(gene_id_SUA[sel_non_zeros], "S"), 
+                                                                      paste(gene_id_SUA[sel_non_zeros], "U"), 
+                                                                      paste(gene_id_SUA[sel_non_zeros], "A") ))
                              rownames(S_U_A) = gene_2_tr$transcript_id
                              
-                             precision = prior_precision(gene_to_transcript = gene_2_tr,
-                                                         transcript_counts = S_U_A,
-                                                         n_cores = 1)[[1]]
-                             # only store mean and var of precision.
+                             log_precision = prior_precision(gene_to_transcript = gene_2_tr,
+                                                             transcript_counts = S_U_A,
+                                                             max_n_genes_used = 10^3,
+                                                             n_cores = 1)[[2]]
                              
                              rm(gene_2_tr); rm(S_U_A)
                              
+                             pi_S = rowSums(S)/( rowSums(S) + rowSums(U) + rowSums(A) )
+                             pi_U = rowSums(U)/( rowSums(S) + rowSums(U) + rowSums(A) )
+                             matches = match(gene_id_SUA[sel_non_zeros], names(log_precision))
+                             
+                             rm(S); rm(U); rm(A); rm(gene_id_SUA); rm(sel_non_zeros);
+                             
+                             log_delta_S = log( pi_S * exp(log_precision[matches]))
+                             log_delta_U = log( pi_U * exp(log_precision[matches]))
+                             
+                             rm(pi_S); rm(pi_U); rm(matches)
+                             
+                             mean_prior = c(mean(log_precision, na.rm = TRUE),
+                                            mean(log_delta_S, na.rm = TRUE),
+                                            mean(log_delta_U, na.rm = TRUE))
+                             sd_prior = c(sd(log_precision, na.rm = TRUE), 
+                                          sd(log_delta_S, na.rm = TRUE),
+                                          sd(log_delta_U, na.rm = TRUE))
+                             
+                             rm(log_precision); rm(log_delta_S); rm(log_delta_U); 
+                             
                              # if NA or NULL or Inf, use vaguely informative values:
-                             if(is.na(precision[1]) | is.infinite(precision[1]) | is.null(precision[1])){
-                               precision[1] = 3
-                             }
-                             if(is.na(precision[2]) | is.infinite(precision[2]) | is.null(precision[2])){
-                               precision[2] = 10
-                             }
+                             cond = is.na(mean_prior) | is.infinite(mean_prior) | is.null(mean_prior) | is.na(sd_prior) | is.infinite(sd_prior) | is.null(sd_prior)
+                             mean_prior = ifelse(cond, c(log(3),  0,  0), mean_prior )
+                             sd_prior = ifelse(cond, rep(5,3), sd_prior )
                              
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # initialize objects:
@@ -281,17 +303,13 @@ MCMC_ECs = function(PB_data_prepared,
                              delta_SU = lapply(seq_len(n_groups), function(g){
                                ids = sample_ids_per_group[[g]] + 1
                                n = length(ids)
-                               x = PI_SU[[ids[1]]]
+                               x = PI_SU[[ids[1]]][keep_genes_id,]
                                if(n > 1){
                                  for(i in seq.int(2, n, by = 1)){
-                                   x = x + PI_SU[[ids[i]]]
+                                   x = x + PI_SU[[ids[i]]][keep_genes_id,]
                                  }
                                }
-                               x = x/n * exp(precision[1])
-                             })
-                             
-                             chol = lapply(seq_len(n_groups), function(i){
-                               lapply(seq_len(n_genes_keep), matrix, data = 1, nrow = 3, ncol= 3)
+                               x = x/n * exp(mean_prior[1])
                              })
                              
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -299,32 +317,62 @@ MCMC_ECs = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              message("Starting the MCMC")
                              
+                             PI_gene_times_SU = sapply(seq_len(n_samples), function(id){
+                               rep(PI_gene[,id], 3) * c(PI_SU[[id]][,1], PI_SU[[id]][,2],  PI_SU[[id]][,3]  )
+                             })
+                             #rm(PI_gene)
+                             
+                             list_X_unique = sapply(list_X_unique, c)
+                             
+                             # transform list_EC_gene_id, from 0 -> (n_tr-1) to 0 -> (2*n_tr-1)
+                             # if S: keep number in EC
+                             # if U: add n_genes_non_zero to number in EC
+                             list_EC_gene_id = lapply(seq_len(n_samples), function(sample){
+                               lapply(seq_along(list_EC_gene_id[[sample]]), function(ec){
+                                 as.integer(list_EC_gene_id[[sample]][[ec]] + list_EC_USA_id[[sample]][[ec]] * n_genes_non_zero)
+                               })
+                             }) 
+                             # list_EC_USA_id[[sample]][[ec]] * n_genes_non_zero:
+                             # 0 if 0 (S)
+                             # n_genes_non_zero if 1 (U)
+                             # 2 * n_genes_non_zero if 2 (A)
+                             
+                             # gene ids as in "gene_id" file.
+                             rm(list_EC_USA_id)
+                             
+                             sample_EC = rep(FALSE, N_MCMC_one_cl + 1)
+                             sample_EC[seq.int(1, N_MCMC_one_cl, undersampling_int)] = TRUE
+                             
+                             sample_SU_TF = ifelse(seq_len(n_genes_non_zero) %in% keep_genes_id, 1, 0)
+                             
+                             X_list = lapply(seq_len(n_samples), matrix, data = 1, nrow = 2, ncol= 2)
+
                              res = .Call(`_DifferentialRegulation_Rcpp_MCMC`,
-                                 n_samples, # N samples
-                                 n_genes_non_zero, # N genes_non_zero
-                                 n_groups, # N groups
-                                 n_genes_keep, # number of genes_non_zero to be analyzed.
-                                 keep_genes_id-1, # vector indicating genes_non_zero to be analyzed (SU differential testing)
-                                 numeric_groups - 1, # -1 ! # group id for every sample (must start from 0)
-                                 sample_ids_per_group, # each list = vector with ids of samples 
-                                 n_samples_per_group,
-                                 N_MCMC_one_cl, # MCMC iter
-                                 burn_in_one_cl, # burn-in
-                                 PI_gene, # prob of each gene (for every sample)
-                                 PI_SU, # prob of each gene (for every sample)
-                                 list_X_unique, # SU uniquely mapping counts
-                                 list_EC_gene_id, # SU uniquely mapping counts
-                                 list_EC_USA_id, # TRUE -> S; FALSE -> U
-                                 counts, # EC counts (integers)
-                                 MCMC_bar_pi_1,
-                                 MCMC_bar_pi_2,
-                                 MCMC_bar_pi_3,
-                                 chol,
-                                 delta_SU,
-                                 TRUE, # I ALWAYS USE THE PRIOR
-                                 precision[1],
-                                 precision[2], 
-                                 2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
+                                         n_samples, # N samples
+                                         n_genes_non_zero, # N genes_non_zero
+                                         n_groups, # N groups
+                                         n_genes_keep, # number of genes_non_zero to be analyzed.
+                                         keep_genes_id-1, # vector indicating genes_non_zero to be analyzed (SU differential testing)
+                                         numeric_groups - 1, # -1 ! # group id for every sample (must start from 0)
+                                         sample_ids_per_group, # each list = vector with ids of samples 
+                                         n_samples_per_group,
+                                         N_MCMC_one_cl, # MCMC iter
+                                         burn_in_one_cl, # burn-in
+                                         PI_gene_times_SU, # prob of each gene (for every sample)
+                                         PI_SU, # prob of each gene (for every sample)
+                                         list_X_unique, # SU uniquely mapping counts
+                                         list_EC_gene_id, # SU uniquely mapping counts
+                                         counts, # EC counts (integers)
+                                         MCMC_bar_pi_1,
+                                         MCMC_bar_pi_2,
+                                         MCMC_bar_pi_3,
+                                         delta_SU,
+                                         mean_prior,
+                                         sd_prior,
+                                         sample_EC,
+                                         X_list,
+                                         sample_SU_TF,
+                                         c_prop) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -353,22 +401,26 @@ MCMC_ECs = function(PB_data_prepared,
                                  X/rowSums(X)
                                })
                                
-                               rm(tot_spliced); rm(tot_unspliced); rm(tot_ambiguous)
+                               PI_gene_times_SU = sapply(seq_len(n_samples), function(id){
+                                 rep(PI_gene[,id], 3) * c(PI_SU[[id]][,1], PI_SU[[id]][,2],  PI_SU[[id]][,3]  )
+                               })
+                               
+                               rm(tot_spliced); rm(tot_unspliced); rm(tot_ambiguous); rm(PI_gene)
                                
                                delta_SU = lapply(seq_len(n_groups), function(g){
                                  ids = sample_ids_per_group[[g]] + 1
                                  n = length(ids)
-                                 x = PI_SU[[ids[1]]]
+                                 x = PI_SU[[ids[1]]][keep_genes_id,]
                                  if(n > 1){
                                    for(i in seq.int(2, n, by = 1)){
-                                     x = x + PI_SU[[ids[i]]]
+                                     x = x + PI_SU[[ids[i]]][keep_genes_id,]
                                    }
                                  }
-                                 x = x/n * exp(precision$prior[1])
+                                 x = x/n * exp(mean_prior[1])
                                })
-                               chol = lapply(seq_len(n_groups), function(i){
-                                 lapply(seq_len(n_genes_keep), matrix, data = 1, nrow = 3, ncol= 3)
-                               })
+                               
+                               sample_EC = rep(FALSE, N_MCMC_one_cl + 1)
+                               sample_EC[seq.int(1, N_MCMC_one_cl, undersampling_int)] = TRUE
                                
                                res = .Call(`_DifferentialRegulation_Rcpp_MCMC`,
                                            n_samples, # N samples
@@ -381,21 +433,21 @@ MCMC_ECs = function(PB_data_prepared,
                                            n_samples_per_group,
                                            N_MCMC_one_cl, # MCMC iter
                                            burn_in_one_cl, # burn-in
-                                           PI_gene, # prob of each gene (for every sample)
+                                           PI_gene_times_SU, # prob of each gene (for every sample)
                                            PI_SU, # prob of each gene (for every sample)
                                            list_X_unique, # SU uniquely mapping counts
                                            list_EC_gene_id, # SU uniquely mapping counts
-                                           list_EC_USA_id, # TRUE -> S; FALSE -> U
                                            counts, # EC counts (integers)
                                            MCMC_bar_pi_1,
                                            MCMC_bar_pi_2,
                                            MCMC_bar_pi_3,
-                                           chol,
                                            delta_SU,
-                                           TRUE, # I ALWAYS USE THE PRIOR
-                                           precision$prior[1],
-                                           precision$prior[2], 
-                                           2) # 2 = sd_prior_non_informative in case prior_TF = FALSE
+                                           mean_prior,
+                                           sd_prior,
+                                           sample_EC,
+                                           X_list,
+                                           sample_SU_TF,
+                                           c_prop) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                                
                                convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
                                rm(res)
@@ -420,7 +472,7 @@ MCMC_ECs = function(PB_data_prepared,
                                first = "NOT converged"; second = "converged"
                              }
                              
-                             rm(list_EC_gene_id); rm(list_EC_USA_id)
+                             rm(list_EC_gene_id);
                              
                              message("MCMC completed and successfully converged.")
                              
@@ -437,23 +489,28 @@ MCMC_ECs = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # compute p-value:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+                             # discard burn-in
                              sel = seq.int(from = burn_in_one_cl +1, to = N_MCMC_one_cl, by = 1)
+                             MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][sel,]
+                             MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][sel,]
+                             MCMC_bar_pi_3[[1]] = MCMC_bar_pi_3[[1]][sel,]
+                             MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
+                             MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
+                             MCMC_bar_pi_3[[2]] = MCMC_bar_pi_3[[2]][sel,]
+                             
+                             # swap A positions to decrease correlations:
+                             R = length(sel)
+                             swap = sample.int(R, R) # n indicates the nr of elements of the chain (exluded burn-in)
+                             MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][swap,]
+                             MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][swap,]
+                             MCMC_bar_pi_3[[1]] = MCMC_bar_pi_3[[1]][swap,]
+                             
+                             rm(swap); rm(sel)
+                             
                              p_vals = t(vapply(seq_len(n_genes_keep), function(gene_id){
-                               a = MCMC_bar_pi_1[[1]][sel,gene_id]
-                               b = MCMC_bar_pi_2[[1]][sel,gene_id]
-                               c = MCMC_bar_pi_3[[1]][sel,gene_id]
-                               tot = a+b+c
-                               A = cbind(a, b, c)/tot
-                               
-                               a = MCMC_bar_pi_1[[2]][sel,gene_id]
-                               b = MCMC_bar_pi_2[[2]][sel,gene_id]
-                               c = MCMC_bar_pi_3[[2]][sel,gene_id]
-                               tot = a+b+c
-                               B = cbind(a, b, c)/tot
-                               
-                               compute_pval( A = A, B = B, K = 3, N = n_samples)
-                             }, FUN.VALUE = numeric(21)))
-                             # TODO: speed-up p-val computation!
+                               compute_pval( A = cbind(MCMC_bar_pi_1[[1]][,gene_id], MCMC_bar_pi_2[[1]][,gene_id], MCMC_bar_pi_3[[1]][,gene_id]),
+                                             B = cbind(MCMC_bar_pi_1[[2]][,gene_id], MCMC_bar_pi_2[[2]][,gene_id], MCMC_bar_pi_3[[2]][,gene_id]))
+                             }, FUN.VALUE = numeric(22)))
                              
                              rm(MCMC_bar_pi_1); rm(MCMC_bar_pi_2); rm(MCMC_bar_pi_3)
                              
@@ -466,7 +523,8 @@ MCMC_ECs = function(PB_data_prepared,
                                               p_adj.loc = p_adj,
                                               p_vals[,-1])
                              
-                             colnames(RES)[-c(seq_len(5))] = c("pi_S-gr_A",
+                             colnames(RES)[-c(seq_len(5))] = c("Prob-gr_B-UP",
+                                                               "pi_S-gr_A",
                                                                "pi_U-gr_A",
                                                                "pi_S-gr_B",
                                                                "pi_U-gr_B",
@@ -496,19 +554,22 @@ MCMC_ECs = function(PB_data_prepared,
   
   # merge results from multiple clusters, only if available
   if(length(order) > 1){
-    p_values_ALL_test = lapply(p_values_ALL, function(X){ # 1st element contains DR test
+    RES = lapply(p_values_ALL, function(X){ # 1st element contains DR test
       X[[1]]
     })
-    p_values_ALL_convergence = lapply(p_values_ALL, function(X){ # 2nd element contains convergence results
+    convergence_results = lapply(p_values_ALL, function(X){ # 2nd element contains convergence results
       X[[2]]
     })
     
-    RES = do.call(rbind, p_values_ALL_test)
+    rm(p_values_ALL)
     
-    convergence_results = do.call(rbind, p_values_ALL_convergence)
+    RES = do.call(rbind, RES)
+    convergence_results = do.call(rbind, convergence_results)
   }else{
     RES = p_values_ALL[[1]][[1]]
     convergence_results = p_values_ALL[[1]][[2]]
+    
+    rm(p_values_ALL)
   }
   
   # CHECK if ALL NULL (if all clusters return null):

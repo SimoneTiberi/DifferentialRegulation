@@ -16,7 +16,7 @@
 #' Cell clusters with less than 'min_cells_per_cluster' cells will not be analyzed.  
 #' @param min_counts_per_gene_per_group minimum number of counts per gene, in each cell, across all samples of every group.
 #' In each cell cluster, only genes with at least 'min_counts_per_gene_per_group' counts in both groups of samples will be analyzed.  
-#' @param min_counts_ECs equivalence classes (ECs) filter (NB: only used when 'EC_list' is provided)
+#' @param min_counts_ECs equivalence classes (ECs) filter.
 #' 'min_counts_ECs' indicates the minimum number of counts (across all cells in a cell cluster) for each equivalence class;
 #' by default all ECs are considered (min_counts_ECs = 0).
 #' ECs with less or equal than 'min_counts_ECs' will be discarded.
@@ -59,8 +59,19 @@
 #' matches = match(colnames(sce), DF_cell_types$cell_id)
 #' sce$cell_type = DF_cell_types$cell_type[matches]
 #' 
+#' # set paths to EC counts and ECs:
+#' path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+#' path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+#' 
+#' # load EC counts:
+#' EC_list = load_EC(path_to_EC_counts,
+#'                   path_to_EC,
+#'                   path_to_cell_id,
+#'                   path_to_gene_id,
+#'                   sample_ids)
+#' 
 #' PB_counts = compute_PB_counts(sce = sce,
-#'                               EC_list = NULL,
+#'                               EC_list = EC_list,
 #'                               design =  design,
 #'                               sample_col_name = "sample",
 #'                               group_col_name = "group",
@@ -68,13 +79,13 @@
 #'                               min_cells_per_cluster = 100, 
 #'                               min_counts_per_gene_per_group = 20)
 #'
-#' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
+#' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
-#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{plot_pi}}, 
+#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{DifferentialRegulation}}, \code{\link{plot_pi}}
 #' 
 #' @export
 compute_PB_counts = function(sce,
-                             EC_list = NULL,
+                             EC_list,
                              design,
                              sample_col_name = "sample",
                              group_col_name = "group",
@@ -82,9 +93,14 @@ compute_PB_counts = function(sce,
                              min_cells_per_cluster = 100, 
                              min_counts_per_gene_per_group = 20,
                              min_counts_ECs = 0){
-  if(is.null(EC_list)){
-    message("'EC_list' was not provided: estimated counts in 'sce' will be used to perform differential testing (faster, but marginally less accurate).")
-    message("If you want to use equivalence classes counts (recommended option: slower, but marginally more accurate), provide an 'EC_list' object, computed via 'load_EC' function.")
+  if(!is.numeric(min_counts_per_gene_per_group)){
+    message("'min_counts_per_gene_per_group' must be numeric.")
+  }
+  if(min_counts_per_gene_per_group < 10){
+    message("'min_counts_per_gene_per_group' must be at least 10.")
+  }
+  if(!is.numeric(min_counts_ECs)){
+    message("'min_counts_ECs' must be numeric.")
   }
   
   if( !is.data.frame(design) ){
@@ -164,38 +180,36 @@ compute_PB_counts = function(sce,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # remove empty ECs and ECs with < min_counts_ECs counts
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  if(!is.null(EC_list)){
-    # get cells with selected cell types in sce
-    cells_sel = colnames(sce[,clusters %in% cluster_ids_kept])
-    
-    # compute pseudo-bulk counts aggregating counts across cells:
-    counts = lapply(EC_list[[1]], function(x){
-      sel = rownames(x) %in% cells_sel
-      colSums(x[sel,])
-    })
-    
-    # select non-zero ECs and ECs with > min_counts_ECs counts
-    sel_non_zero_EC = lapply(counts, function(x){
-      x > min_counts_ECs 
-    })
-    # usually, ~ 1/3 of EC counts are 0 and should be removed.
-    rm(cells_sel); rm(counts)
-    
-    # filter EC_list object:
-    EC_list[[1]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[1]][[i]][,sel_non_zero_EC[[i]] ]
-    })
-    # filter counts:
-    EC_list[[2]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[2]][[i]][sel_non_zero_EC[[i]] ]
-    })
-    # filter counts:
-    EC_list[[3]] = lapply( seq_len(n_samples), function(i){
-      EC_list[[3]][[i]][sel_non_zero_EC[[i]] ]
-    })
-    
-    rm(sel_non_zero_EC)
-  }
+  # get cells with selected cell types in sce
+  cells_sel = colnames(sce[,clusters %in% cluster_ids_kept])
+  
+  # compute pseudo-bulk counts aggregating counts across cells:
+  counts = lapply(EC_list[[1]], function(x){
+    sel = rownames(x) %in% cells_sel
+    colSums(x[sel,])
+  })
+  
+  # select non-zero ECs and ECs with > min_counts_ECs counts
+  sel_non_zero_EC = lapply(counts, function(x){
+    x > min_counts_ECs 
+  })
+  # usually, ~ 1/3 of EC counts are 0 and should be removed.
+  rm(cells_sel); rm(counts)
+  
+  # filter EC_list object:
+  EC_list[[1]] = lapply( seq_len(n_samples), function(i){
+    EC_list[[1]][[i]][,sel_non_zero_EC[[i]] ]
+  })
+  # filter counts:
+  EC_list[[2]] = lapply( seq_len(n_samples), function(i){
+    EC_list[[2]][[i]][sel_non_zero_EC[[i]] ]
+  })
+  # filter counts:
+  EC_list[[3]] = lapply( seq_len(n_samples), function(i){
+    EC_list[[3]][[i]][sel_non_zero_EC[[i]] ]
+  })
+  
+  rm(sel_non_zero_EC)
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # get pseudo-bulk EC counts and USA counts from sce:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -206,36 +220,22 @@ compute_PB_counts = function(sce,
   
   gene_ids_sce = rownames(sce)
   
-  if(is.null(EC_list)){
-    res = list(PB_data_prepared,
-               min_counts_per_gene_per_group,
-               n_samples,
-               n_samples_per_group,
-               numeric_groups,
-               cluster_ids_kept,
-               sample_ids_per_group,
-               n_groups,
-               gene_ids_sce,
-               n_cell_types,
-               levels_groups)
-  }else{
-    res = list(PB_data_prepared,
-               min_counts_per_gene_per_group,
-               n_samples,
-               n_samples_per_group,
-               numeric_groups,
-               cluster_ids_kept,
-               sample_ids_per_group,
-               n_groups,
-               gene_ids_sce,
-               n_cell_types,
-               levels_groups,
-               min_counts_ECs,
-               EC_list[[2]],
-               EC_list[[3]],
-               EC_list[[4]],
-               length(EC_list[[4]]))
-  }
+  res = list(PB_data_prepared,
+             min_counts_per_gene_per_group,
+             n_samples,
+             n_samples_per_group,
+             numeric_groups,
+             cluster_ids_kept,
+             sample_ids_per_group,
+             n_groups,
+             gene_ids_sce,
+             n_cell_types,
+             levels_groups,
+             min_counts_ECs,
+             EC_list[[2]],
+             EC_list[[3]],
+             EC_list[[4]],
+             length(EC_list[[4]]))
   
   res
 }

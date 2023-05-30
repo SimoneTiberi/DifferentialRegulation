@@ -1,6 +1,6 @@
-#' Create a list containing the equivalence classes objects object
+#' Create a list containing the equivalence classes objects for the single-cell RNA-seq data
 #'
-#' \code{load_EC} imports the equivalence classes (computed by alevin-fry), and stores them into a list.
+#' \code{load_EC} imports the single-cell equivalence classes (computed by alevin-fry), and stores them into a list.
 #' 
 #' @param path_to_EC_counts a vector of length equals to the number of samples: 
 #' each element indicates the path to the equivalence classes counts of the respective sample (i.e., geqc_counts.mtx file).
@@ -28,7 +28,6 @@
 #' # set paths to USA counts, cell id, gene id, EC counts and ECs:
 #' # Note that alevin-fry needs to be run with `--use-mtx` option
 #' # to store counts in a `quants_mat.mtx` file.
-#' path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
 #' path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
 #' path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
 #' path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
@@ -41,7 +40,7 @@
 #'                   path_to_gene_id,
 #'                   sample_ids)
 #'
-#' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
+#' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
 #' @seealso \code{\link{load_USA}}, \code{\link{DifferentialRegulation}}
 #' 

@@ -3,9 +3,12 @@ title: "DifferentialRegulation: a method to identify genes displaying differenti
 author:
 - name: Simone Tiberi
   affiliation:
-  - &IMLS Institute for Molecular Life Sciences, University of Zurich, Switzerland
-  - &SIB SIB Swiss Institute of Bioinformatics, University of Zurich, Switzerland
-  email: simone.tiberi@uzh.ch
+  - Department of Statistical Sciences, University of Bologna, Bologna, Italy
+  email: simone.tiberi@unibo.it
+- name: Charlotte Soneson
+  affiliation:
+  - Computational Biology Platform, Friedrich Miescher Institute for Biomedical Research, Basel, Switzerland
+  email: charlottesoneson@gmail.com
 package: "`r BiocStyle::pkg_ver('DifferentialRegulation')`"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 bibliography: References.bib
@@ -24,11 +27,14 @@ knitr::opts_chunk$set(tidy=FALSE, cache=TRUE,
                       message=TRUE, error=FALSE, warning=TRUE)
 ```
 
+
+
 # Introduction
-*DifferentialRegulation* is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced (S) and unspliced (U) mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
+*DifferentialRegulation* is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples), by targeting differences in the balance of spliced (S) and unspliced (U) mRNA abundances.
+The method fits both bulk and single-cell RNA-sequencing (scRNA-seq) data: on bulk data, *DifferentialRegulation* targets changes (across all cells) at the transcript level, while on single-cell data, it targets cell-type specific changes at the gene-level.
 
 Below, we briefly illustrate the main conceptual and mathematical aspects.
-For more details, a pre-print will follow shortly (~summer 2022).
+For more details, a pre-print will follow shortly.
 
 ## Conceptual idea
 
@@ -48,17 +54,27 @@ Similarly to RNA velocity tools, *DifferentialRegulation* is an instrument to fa
 ## Mathematical details
 
 From a mathematical point of view, *DifferentialRegulation* accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
-Our method also deals with two major sources of mapping uncertainty: i) 'ambiguous' reads, compatible with both spliced and unspliced versions of a gene, and ii) reads mapping to multiple genes.
-In particular, ambiguous reads are treated separately from spliced and unsplced reads; furthermore, when providing equivalence classes data (via `EC_list`), reads that are compatible with multiple genes are allocated to the gene of origin.
+Furthermore, our method also deals with two major sources of mapping uncertainty: i) 'ambiguous' reads, compatible with both spliced and unspliced versions of a gene or transcript, and ii) reads mapping to multiple genes or transcripts.
+When using scRNA-seq data, ambiguous reads are considered separately from spliced and unsplced reads, while reads that are compatible with multiple genes are treated as latent variables and allocated to the gene of origin.
+When using bulk RNA-seq data, we allocate both ambiguous reads and reads mapping to multiple transcripts: the former ones are allocated to the spliced or unspliced version of each trascript, while the latter ones are allocated to the transcript of origin.
 
-*DifferentialRegulation* uses two nested models:
+*DifferentialRegulation* uses two nested models.
+
+In single-cell RNA-seq data:
 
 - a Dirichlet-multinomial ($DM$) for the proportions of unspliced, spliced and ambiguous (USA) reads in each gene: $DM(\pi_U, \pi_S, \pi_A, \delta)$, where $\pi_U, \pi_S, \pi_A$ indicate the (group-level) relative abundances of U, S and A counts, and $\delta$ represents the precision parameter, modelling the degree of over-dispersion between samples;
+
 - a multinomial ($MN$) for the (sample-specific) relative abundance of genes in each sample: $MN(\pi^i_1, ..., \pi^i_{n_g})$, where $\pi^i_g$ is the relative abundance of the $g$-th gene in the $i$-th sample.
+
+In bulk RNA-seq data:
+
+- a Dirichlet-multinomial ($DM$) for the proportions of unspliced and spliced (US) reads in each transcript: $DM(\pi_U, \pi_S, \delta)$, where $\pi_U, \pi_S$ indicate the (group-level) relative abundances of U and S counts, and $\delta$ represents the precision parameter, modelling the degree of over-dispersion between samples;
+
+- a multinomial ($MN$) for the (sample-specific) relative abundance of transcripts in each sample: $MN(\pi^i_1, ..., \pi^i_{n_t})$, where $\pi^i_t$ is the relative abundance of the $t$-th transcript in the $i$-th sample.
 
 The $DM$ model is the main focus here, and the one which is used for differential testing between conditions, while the $MN$ model is necessary for allocating reads across genes.
 
-Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs), and differential testing is performed by comparing $(\pi_U, \pi_S, \pi_A)$ between conditions.
+Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs), and differential testing is performed by comparing $(\pi_U, \pi_S, \pi_A)$ (single-cell data) or $(\pi_U, \pi_S)$ (bulk data) or  between conditions.
 
 ## Bioconductor installation
 `DifferentialRegulation` is available on [Bioconductor](https://bioconductor.org/packages/DifferentialRegulation) and can be installed with the command:
@@ -73,7 +89,7 @@ To access the R code used in the vignettes, type:
 browseVignettes("DifferentialRegulation")
 ```
 
-## Questions and issues
+## Questions, issues and citation
 
 Questions relative to *DifferentialRegulation* should be reported as a new issue at *[BugReports](https://github.com/SimoneTiberi/DifferentialRegulation/issues)*.
 
@@ -82,7 +98,11 @@ To cite *DifferentialRegulation*, type:
 citation("DifferentialRegulation")
 ```
 
-# Input data: alignment and quantification with *alevin-fry*
+
+
+# Single-cell RNA-seq pipeline
+
+## Input data: alignment and quantification with *alevin-fry*
 *DifferentialRegulation* inputs scRNA-seq data, aligned via *alevin-fry* [@alevin-fry].
 
 NOTE: when using *alevin-fry*, set options:
@@ -92,11 +112,14 @@ NOTE: when using *alevin-fry*, set options:
 
 We also recommend using the `--CR-like-EM` option, which also allows equivalence classes of reads that map to multiple genes.
 
-Software: https://github.com/COMBINE-lab/alevin-fry
+*alevin-fry* software: https://github.com/COMBINE-lab/alevin-fry
 
-Documentation: https://alevin-fry.readthedocs.io/en/latest/index.html
+*alevin-fry* documentation: https://alevin-fry.readthedocs.io/en/latest/index.html
 
-# Pipeline
+*alevin-fry* tutorial to obtain USA mapping:
+https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/
+
+## Load the package
 Load *DifferentialRegulation*.
 ```{r load, message=FALSE}
 library(DifferentialRegulation)
@@ -134,7 +157,7 @@ path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
 ```
 
 ### Load USA counts
-Load the unspliced, spliced and ambiguous (USA) counts, quantified by *alevin-fry*, in a *SingleCellExperiment*.
+Load the unspliced, spliced and ambiguous (USA) estimated counts, quantified by *alevin-fry*, in a *SingleCellExperiment*.
 By default, counts (stored in `assays(sce)$counts`) are defined as summation of spliced read and 50% of ambiguous reads (i.e., reads compatible with both spliced and unspliced versions of a gene): counts = spliced + 0.5 * ambiguous.
 ```{r load_USA_counts}
 sce = load_USA(path_to_counts,
@@ -155,7 +178,7 @@ table(sce$cell_type)
 ```
 
 ### Load equivalence classes (EC)
-Load the equivalence classes and respective counts (only needed when performing differential testing on ECs).
+Load the equivalence classes and respective counts.
 ```{r load_EC_counts}
 EC_list = load_EC(path_to_EC_counts,
                   path_to_EC,
@@ -175,10 +198,7 @@ For examples of QC, you can refer to the [OSCA book](http://bioconductor.org/boo
 
 Importantly, cells only need to be filtered in the `sce` object, and NOT in the `EC_list` object: cells that are filtered in `sce` will also be removed from ECs by `compute_PB_counts` function.
 
-## Differential regulation testing 
-Differential testing can be performed on USA estimated counts (faster) or on ECs (slower, but more accurate).
-Using EC counts allows to explicitly model the uncertainty from reads that map to multiple genes.
-
+## Differential testing 
 First, we define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
 ```{r samples_design}
 design = data.frame(sample = sample_ids,
@@ -197,30 +217,21 @@ PB_counts = compute_PB_counts(sce = sce,
 ```
 
 NB: to reduce memory usage, we can remove the `EC_list` object, which typically requires a large amount of memory, particularly in large datasets.
-If needed, the `sce` object can be removed as well, as neither is needed for differential testing.
+If needed, the `sce` object can be removed as well, since it is not needed for differential testing.
 ```{r rm_EC_list}
 rm(EC_list)
 ```
 
-### USA testing
-To perform differential testing on USA esitmated counts, set `EC` to `FALSE`.
-```{r sce-test}
-# sce-based test:
-set.seed(169612)
-results_USA = DifferentialRegulation(PB_counts,
-                                     EC = FALSE)
-```
-
-### EC testing (recommended option)
-To perform differential testing on EC counts, set `EC` to `FALSE` (default value).
+We perform differential testing:
 ```{r EC-test}
 # EC-based test:
 set.seed(169612)
-results_EC = DifferentialRegulation(PB_counts)
+results = DifferentialRegulation(PB_counts,
+                                 n_cores = 2)
 ```
 
 ## Visualizing results
-In both USA and ECs approaches, `DifferentialRegulation` function returns of a list of 4 data.frames:
+`DifferentialRegulation` function returns of a list of 4 data.frames:
 
 - `Differential_results`, which contains results from differential testing only;
 - `US_results`, that has results for the proportion of Spliced and Unspliced counts (where Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
@@ -228,13 +239,26 @@ In both USA and ECs approaches, `DifferentialRegulation` function returns of a l
 - `Convergence_results`, that contains information about convergence of posterior chains.
 
 ```{r names-results}
-names(results_EC)
+names(results)
 ```
 
 In `Differential_results` element, columns `Gene_id` and `Cluster_id` contain the gene and cell-cluster name,  while `p_val`, `p_adj.loc` and `p_adj.glb` report the raw p-values, locally and globally adjusted p-values, via Benjamini and Hochberg (BH) correction.
 In locally adjusted p-values (`p_adj.loc`) BH correction is applied to each cluster separately, while in globally adjusted p-values (`p_adj.glb`) BH correction is performed to the results from all clusters.
 ```{r visualize_gene_results}
-head(results_EC$Differential_results, 3)
+head(results$Differential_results, 3)
+```
+
+The final column of `results$Differential_results`, `Prob-group_name-UP`, indicates the probability that a gene is UP-regulated in one group (`6 mon` in this case) compared to the other group.
+This column can be used to sort genes, by the probability that they are being up-regulated in group `6 mon`:
+```{r sort_gene_results-UP}
+ordering_UP = order(results$Differential_results[,6], decreasing = TRUE)
+head(results$Differential_results[ordering_UP,], 3)
+```
+
+Alternatively, one can sort genes by their probability of currently being down-regulated in group `6 mon` (or conversely, up-regularted in the alternative group, `3mon`):
+```{r sort_gene_results-DOWN}
+ordering_DOWN = order(results$Differential_results[,6], decreasing = FALSE)
+head(results$Differential_results[ordering_DOWN,], 3)
 ```
 
 In `US_results` and `USA_results` elements, `pi` and `sd` indicate the estimated proportion and standard deviation, respectively, `S`, `U` and `A` refer to Spliced, Unspliced and Ambiguous counts, respectively, while `3 mon` and `6 mon` refer to the groups, as named in the `design`.
@@ -242,17 +266,17 @@ For instance, columns `pi_S-3 mon` and `sd_S-3 mon` indicate the estimate (poste
 
 We visualize US results.
 ```{r visualize_US_results}
-head(results_EC$US_results, 3)
+head(results$US_results, 3)
 ```
 
 We visualize USA results.
 ```{r visualize_USA_results}
-head(results_EC$USA_results, 3)
+head(results$USA_results, 3)
 ```
 
 We can also visualize information about the convergence of the posterior chains.
 ```{r visualize_convergence_results}
-results_EC$Convergence_results
+results$Convergence_results
 ```
 
 Finally, we can plot the estimated proportions of spliced and unspliced reads.
@@ -261,17 +285,151 @@ If `CI = TRUE` (default option), for each estimate, we can also add the respecti
 Similarly to above, we can plot the proportion of US or USA reads.
 Note that, although US reads are easier to interpret, USA reads more closely reflect what is being compared between conditions.
 ```{r plot_pi}
-plot_pi(results_EC,
+plot_pi(results,
         type = "US",
-        gene_id = results_EC$Differential_results$Gene_id[1],
-        cluster_id = results_EC$Differential_results$Cluster_id[1])
+        gene_id = results$Differential_results$Gene_id[1],
+        cluster_id = results$Differential_results$Cluster_id[1])
 ```
 
 ```{r plot_pi_USA}
-plot_pi(results_EC,
+plot_pi(results,
         type = "USA",
-        gene_id = results_EC$Differential_results$Gene_id[1],
-        cluster_id = results_EC$Differential_results$Cluster_id[1])
+        gene_id = results$Differential_results$Gene_id[1],
+        cluster_id = results$Differential_results$Cluster_id[1])
+```
+
+
+
+# Bulk RNA-seq pipeline
+
+## Input data: alignment and quantification with *salmon* or *kallisto*
+*DifferentialRegulation* inputs bulk RNA-seq data.
+
+Firstly, we should generate an expanded reference transcriptome, containing both spliced and unsplced versions of each transcript.
+The code to generate such a reference can be found [here](https://github.com/csoneson/differential_regulation_simulation/blob/main/scripts/prepare_expanded_reference_files.R).
+
+Then, using the extended reference, alignment and quantification can be performed via *salmon* [@salmon] or *kallisto* [@kallisto].
+
+NOTE:
+- when using *salmon*, use the option `--dumpEq` to obtain the equivalence classes;
+- when using *kallisto*, run both `kallisto quant` and `kallisto pseudo` to obtain the transcript estimated counts and equivalence classes, respectively.
+
+*salmon* software: https://combine-lab.github.io/salmon/
+
+*kallisto* software: 
+https://pachterlab.github.io/kallisto/about
+
+## Load the package
+Load *DifferentialRegulation*.
+```{r load-bulk, message=FALSE}
+library(DifferentialRegulation)
+```
+
+## Load the data
+Here, we use a small simulated dataset (human genome), made of two groups of three samples each, where differential effects were artificially introduced in a sub-set of transcripts.
+
+The scripts to generate this simulated data can be found [here](https://github.com/csoneson/differential_regulation_simulation).
+Here we use the small simulation (called subset), based on chromosome 22 only.
+
+We specify the directory of the data (internal in the package).
+```{r specify_data-dir-bulk}
+data_dir = system.file("extdata", package = "DifferentialRegulation")
+```
+
+Specify the path to the data (counts and equivalence classes).
+```{r specify_directories-bulk}
+# specify samples ids:
+sample_ids = paste0("sample", seq_len(6))
+
+# US estimates:
+quant_files = file.path(data_dir, "salmon", sample_ids, "quant.sf")
+file.exists(quant_files)
+
+# Equivalence classes:
+equiv_classes_files = file.path(data_dir, "salmon", sample_ids, "aux_info/eq_classes.txt.gz")
+file.exists(equiv_classes_files)
+```
+
+### Load US counts
+Load the unspliced and spliced (US) estimated counts, quantified by *salmon*, in a *SummarizedExperiment*.
+```{r load_US_counts-bulk}
+SE = load_bulk_US(quant_files,
+                  sample_ids)
+```
+
+### Load equivalence classes (EC)
+Load the equivalence classes and respective counts.
+```{r load_EC_counts-bulk}
+EC_list = load_bulk_EC(path_to_eq_classes = equiv_classes_files,
+                       n_cores = 2)
+```
+For every sample, `load_bulk_EC` prints the percentage of multi-mapping reads; i.e., reads compatible with multiple transcripts, or to both spliced and unspliced versions of a trascript.
+Intuitively, the larger these numbers, the greater the benefits one may achieve by using ECs and modelling the variability of these uncertain gene allocations.
+
+## QC and filtering
+Quality control (QC) and filtering of low quality cells can be performed as usual on the `SE` object, using the `spliced` assay.
+
+Importantly, cells only need to be filtered in the `SE` object, and NOT in the `EC_list` object: cells that are filtered in `SE` will also be removed from ECs when running `DifferentialRegulation_bulk` function.
+
+## Differential testing 
+First, we define the design of the study: in our case we have 2 groups, that we call "A" and "B" of 2 samples each.
+```{r samples_design-bulk}
+group_names = rep(c("A", "B"), each = 3)
+design = data.frame(sample = sample_ids,
+                    group = group_names)
+design
+```
+
+We perform differential testing:
+```{r EC-test-bulk}
+# EC-based test:
+set.seed(169612)
+results = DifferentialRegulation_bulk(SE = SE, 
+                                      EC_list = EC_list,
+                                      design = design,
+                                      n_cores = 2)
+```
+
+## Visualizing results
+`DifferentialRegulation` function returns of a list of 2 data.frames:
+
+- `Differential_results`, which contains results from differential testing, and estimates of the proportion of Spliced and Unspliced reads in each group;
+- `Convergence_results`, that contains information about convergence of posterior chains.
+
+```{r names-results-bulk}
+names(results)
+```
+
+In `Differential_results` element, column `Transcript_id` contains the transcript name,  while `p_val` and `p_adj` report the raw and adjusted p-values, via Benjamini and Hochberg (BH) correction.
+`Prob-group_name-UP`, indicates the probability that a gene is UP-regulated in one group (`B` in this case) compared to the other group.
+Names `pi` and `sd` indicate the estimated proportion and standard deviation, respectively, `S` and `U` refer to Spliced and Unspliced counts, respectively, while `A` and `B` refer to the groups, as named in the `design`.
+For instance, columns `pi_S-B` and `sd_S-B` indicate the estimate (posterior mean) and standard deviation (sd) for the proportion of Spliced (pi_S) and Unspliced (pi_U) counts in group `B`, respectively.
+```{r visualize_gene_results-bulk}
+head(results$Differential_results, 3)
+```
+
+We can also sort genes by the probability that they are being up-regulated in group `B`:
+```{r sort_gene_results-UP-bulk}
+ordering_UP = order(results$Differential_results[,4], decreasing = TRUE)
+head(results$Differential_results[ordering_UP,], 3)
+```
+
+Alternatively, one can sort genes by their probability of currently being down-regulated in group `B` (or conversely, up-regularted in the alternative group, `3mon`):
+```{r sort_gene_results-DOWN-bulk}
+ordering_DOWN = order(results$Differential_results[,4], decreasing = FALSE)
+head(results$Differential_results[ordering_DOWN,], 3)
+```
+
+We can also visualize information about the convergence of the posterior chains.
+```{r visualize_convergence_results-bulk}
+results$Convergence_results
+```
+
+Finally, we can plot the estimated proportions of spliced and unspliced reads.
+If `CI = TRUE` (default option), for each estimate, we can also add the respective profile Wald type confidence interval, of level `CI_level` (0.95 by default).
+```{r plot_pi-bulk}
+plot_bulk_pi(results,
+             transcript_id = results$Differential_results$Transcript_id[1])
 ```
 
 # Session info

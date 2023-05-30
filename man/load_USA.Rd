@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_USA.R
 \name{load_USA}
 \alias{load_USA}
-\title{Create a list containing the equivalence classes objects object}
+\title{Creates a SingleCellExperiment containing the estimated USA counts for the single-cell RNA-seq data}
 \usage{
 load_USA(path_to_counts, path_to_cell_id, path_to_gene_id, sample_ids)
 }
@@ -23,8 +23,8 @@ each element indicates the name of the sample.}
 A \code{SingleCellExperiment} object.
 }
 \description{
-\code{load_USA} imports the estimated USA (Unspliced, Spliced and Ambiguous) counts (computed by alevin-fry), 
-and stores them into a \code{SingleCellExperiment} object.
+\code{load_USA} imports the single-cell estimated USA (Unspliced, Spliced and Ambiguous) 
+counts (computed by alevin-fry), and stores them into a \code{SingleCellExperiment} object.
 }
 \examples{
 # load internal data to the package:
@@ -54,5 +54,5 @@ sce = load_USA(path_to_counts,
 \code{\link{load_EC}}, \code{\link{DifferentialRegulation}}
 }
 \author{
-Simone Tiberi \email{simone.tiberi@uzh.ch}
+Simone Tiberi \email{simone.tiberi@unibo.it}
 }

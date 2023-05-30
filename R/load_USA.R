@@ -1,7 +1,7 @@
-#' Create a list containing the equivalence classes objects object
+#' Creates a SingleCellExperiment containing the estimated USA counts for the single-cell RNA-seq data
 #'
-#' \code{load_USA} imports the estimated USA (Unspliced, Spliced and Ambiguous) counts (computed by alevin-fry), 
-#' and stores them into a \code{SingleCellExperiment} object.
+#' \code{load_USA} imports the single-cell estimated USA (Unspliced, Spliced and Ambiguous) 
+#' counts (computed by alevin-fry), and stores them into a \code{SingleCellExperiment} object.
 #' 
 #' @param path_to_counts a vector of length equals to the number of samples: 
 #' each element indicates the path to the USA estimated count matrix of the respective sample (i.e., quants_mat.mtx file).
@@ -37,7 +37,7 @@
 #'                path_to_gene_id,
 #'                sample_ids)
 #' 
-#' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
+#' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
 #' @seealso \code{\link{load_EC}}, \code{\link{DifferentialRegulation}}
 #' 

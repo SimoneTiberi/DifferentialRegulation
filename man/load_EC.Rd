@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_EC.R
 \name{load_EC}
 \alias{load_EC}
-\title{Create a list containing the equivalence classes objects object}
+\title{Create a list containing the equivalence classes objects for the single-cell RNA-seq data}
 \usage{
 load_EC(
   path_to_EC_counts,
@@ -32,7 +32,7 @@ each element indicates the name of the sample.}
 A \code{list} object.
 }
 \description{
-\code{load_EC} imports the equivalence classes (computed by alevin-fry), and stores them into a list.
+\code{load_EC} imports the single-cell equivalence classes (computed by alevin-fry), and stores them into a list.
 }
 \examples{
 # load internal data to the package:
@@ -47,7 +47,6 @@ file.exists(base_dir)
 # set paths to USA counts, cell id, gene id, EC counts and ECs:
 # Note that alevin-fry needs to be run with `--use-mtx` option
 # to store counts in a `quants_mat.mtx` file.
-path_to_counts = file.path(base_dir,"/alevin/quants_mat.mtx")
 path_to_cell_id = file.path(base_dir,"/alevin/quants_mat_rows.txt")
 path_to_gene_id = file.path(base_dir,"/alevin/quants_mat_cols.txt")
 path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
@@ -65,5 +64,5 @@ EC_list = load_EC(path_to_EC_counts,
 \code{\link{load_USA}}, \code{\link{DifferentialRegulation}}
 }
 \author{
-Simone Tiberi \email{simone.tiberi@uzh.ch}
+Simone Tiberi \email{simone.tiberi@unibo.it}
 }

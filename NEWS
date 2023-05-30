@@ -1,3 +1,6 @@
+Changes in version 1.98.0:
++ bulk RNA-seq data allowed: the package now works with both bulk and single-cell RNA-seq data.
+
 Changes in version 1.0.7:
 + bug (prompting when analyzing 1 cluster only) in DifferentialRegulation function fixed
 

@@ -46,10 +46,7 @@ find_mode <- function(x, adjust, ...) {
 }
 
 # compute gene-level p-value:
-compute_pval = function(A, B, K = 3, N){
-  R = nrow(A)
-  A = A[sample.int(R, R),] # n indicates the nr of elements of the chain (exluded burn-in)
-  
+compute_pval = function(A, B, K = 3){
   gamma = A - B
   
   CV  = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
@@ -65,11 +62,9 @@ compute_pval = function(A, B, K = 3, N){
   }, FUN.VALUE = numeric(1))
   
   # USA posterior mean and SD of both conditions, A and B.
-  mode_A_USA = colSums(A) # find.mode (mode) or sum (mean)
-  mode_A_USA = mode_A_USA/sum(mode_A_USA)
+  mode_A_USA = colMeans(A) # find.mode (mode) or sum (mean)
   sd_A_USA = sqrt(diag(var(A)))
-  mode_B_USA = colSums(B) # find.mode (mode) or sum (mean)
-  mode_B_USA = mode_B_USA/sum(mode_B_USA)
+  mode_B_USA = colMeans(B) # find.mode (mode) or sum (mean)
   sd_B_USA = sqrt(diag(var(B)))
   
   # US posterior mean and SD of both conditions, A and B.
@@ -81,17 +76,47 @@ compute_pval = function(A, B, K = 3, N){
   B[,2] = B[,2] + 0.5 * B[,3]
   B = B[, seq_len(2)]
   
-  mode_A = colSums(A) # find.mode (mode) or sum (mean)
-  mode_A = mode_A/sum(mode_A)
+  # prob group B is UP_reg compared to group A (pi_U_B  > pi_U_A)
+  pr_UP = mean(B[,2] > A[,2])
+  
+  mode_A = colMeans(A) # find.mode (mode) or sum (mean)
   sd_A = sqrt(diag(var(A)))
-  mode_B = colSums(B) # find.mode (mode) or sum (mean)
-  mode_B = mode_B/sum(mode_B)
+  mode_B = colMeans(B) # find.mode (mode) or sum (mean)
   sd_B = sqrt(diag(var(B)))
   
   c( mean(p_value), # p-value for Diff. Reg.
-    mode_A, mode_B, sd_A, sd_B, # posterior mean and SD for US pi
-    mode_A_USA, mode_B_USA, sd_A_USA, sd_B_USA) # posterior mean and SD for USA pi
+     pr_UP, # Prob group 2 is UP-regulated
+     mode_A, mode_B, sd_A, sd_B, # posterior mean and SD for US pi
+     mode_A_USA, mode_B_USA, sd_A_USA, sd_B_USA) # posterior mean and SD for USA pi
 }
+
+compute_pval_US = function(A, B){
+  gamma = A - B
+  
+  # prob group B is UP_reg compared to group A (pi_U_B  > pi_U_A)
+  pr_UP = mean(B[,2] > A[,2])
+  
+  CV  = cov(gamma) # cov is 20ish times faster than posterior mode (very marginal cost).
+  mode = apply(gamma, 2, find_mode, adjust = 10)
+  
+  p_value = vapply(seq_len(2), function(k){
+    sel  = seq_len(2)[-k]
+    # Normal (classical Wald test)
+    stat = t(mode[sel]) %*% ginv(CV[sel, sel], tol = 0) %*% mode[sel]
+    1-pchisq(stat, df = 1)
+  }, FUN.VALUE = numeric(1))
+  
+  # US posterior mean and SD of both conditions, A and B.
+  mode_A = colMeans(A) # find.mode (mode) or sum (mean)
+  sd_A = c(sd(A[,1]), sd(A[,2]))
+  mode_B = colMeans(B) # find.mode (mode) or sum (mean)
+  sd_B = c(sd(B[,1]), sd(B[,2]))
+  
+  c( mean(p_value), # p-value for Diff. Reg.
+     pr_UP, # Prob group 2 is UP-regulated
+     mode_A, mode_B, sd_A, sd_B) # posterior mean and SD for US pi
+}
+
 
 # convergence diagnostic:
 my_heidel_diag = function(x, R, by., pvalue = 0.01){

@@ -1,4 +1,4 @@
-#' Discover differentially regulated genes
+#' Discover differentially regulated genes from single-cell RNA-seq data
 #'
 #' \code{DifferentialRegulation} identified differentially regulated genes between two conditions 
 #' (e.g., healthy vs. disease or treated vs. untreated) in each cluster of cells.
@@ -6,8 +6,6 @@
 #' via a multivariate Wald test on the posterior densities of the group-level USA (Unspliced, Spliced and Ambiguous) counts relative abundance.
 #' 
 #' @param PB_counts a \code{list}, computed via \code{\link{compute_PB_counts}}
-#' @param EC a logical, indicating whether to use equivalence classes (if TRUE, default)
-#' or USA estimated counts (if FALSE).
 #' @param n_cores the number of cores to parallelize the tasks on.
 #' Since parallelization is at the cluster level (each cluster is parallelized on a thread), 
 #' we suggest setting n_cores to the number of clusters (e.g., cell-types), as set by default if 'n_cores' is not specified.
@@ -16,10 +14,17 @@
 #' we automatically double N_MCMC and burn_in, and run it a second time (a message will be printed on screen to inform users).
 #' @param burn_in the length of the burn-in; i.e., the initial part of the MCMC chain to be discarded (before convergence is reached).
 #' Min 500.
-#' If no convergence is reached, the 'burn_in' is authomatically increased (up to N_MCMC/2) according to 
+#' If no convergence is reached, the 'burn_in' is automatically increased (up to N_MCMC/2) according to 
 #' the convergence detected by Heidelberger and Welch's convergence diagnostic.
 #' If our algorithm does not converge even after increasing the burn-in, 
 #' we automatically double N_MCMC and burn_in, and run it a second time (a message will be printed on screen to inform users).
+#' @param undersampling_int the undersampling of the latent variables.
+#' While model parameters are sampled at each iteration,
+#' RNA-seq counts are allocated to their transcript (and spliced/unspliced) version of origin,
+#' every `undersampling_int` iterations.
+#' Increasing `undersampling_int` will decrease the runtime, but may marginally affect performance.
+#' In our benchmarks, no differences in performance were observed for values up to 10.
+#' @param c_prop temporary parameter; do NOT edit.
 #' 
 #' @return A \code{list} of 4 \code{data.frame} objects.
 #' 'Differential_results' contains results from differential testing only;
@@ -74,86 +79,72 @@
 #' matches = match(colnames(sce), DF_cell_types$cell_id)
 #' sce$cell_type = DF_cell_types$cell_type[matches]
 #'
+#' # set paths to EC counts and ECs:
+#' path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+#' path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+#' 
+#' # load EC counts:
+#' EC_list = load_EC(path_to_EC_counts,
+#'                   path_to_EC,
+#'                   path_to_cell_id,
+#'                   path_to_gene_id,
+#'                   sample_ids)
+#'                     
 #' PB_counts = compute_PB_counts(sce = sce,
-#'                               EC_list = NULL,
+#'                               EC_list = EC_list,
 #'                               design =  design,
 #'                               sample_col_name = "sample",
 #'                               group_col_name = "group",
 #'                               sce_cluster_name = "cell_type",
 #'                               min_cells_per_cluster = 100, 
 #'                               min_counts_per_gene_per_group = 20)
-#'                               
-#' # Differential regulation test based on estimated USA (unspliced, spliced, ambiguous) counts
-#' set.seed(169612)
-#' results_USA = DifferentialRegulation(PB_counts, EC = FALSE)
 #' 
-#' # DifferentialRegulation returns of a list of 3 data.frames:
-#' # "Differential_results" contains results from differential testing only;
-#' # "US_results" has estimates and standard deviation (SD) for pi_S and pi_U (proportion of Spliced and Unspliced counts);
-#' # "USA_results" has estimates and standard deviation (SD) for pi_S, pi_U and pi_A (proportion of Spliced, Unspliced and Ambiguous counts).
-#' names(results_USA)
-#' 
+#' # to reduce memory usage, we can remove the EC_list object:
+#' rm(EC_list)
+#'   
+#' set.seed(169612) 
+#' results = DifferentialRegulation(PB_counts,
+#'                                  n_cores = 2)
+#'   
+#' names(results)
+#'   
 #' # We visualize differential results:
-#' head(results_USA$Differential_results)
-#' 
-#' # For improved performance, at a higher computational cost,
-#' # we recommend using equivalence classes (EC) (here not run for computational reasons)
-#' if(FALSE){
-#'   # set paths to EC counts and ECs:
-#'   path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
-#'   path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
-#' 
-#'   # load EC counts:
-#'   EC_list = load_EC(path_to_EC_counts,
-#'                     path_to_EC,
-#'                     path_to_cell_id,
-#'                     path_to_gene_id,
-#'                     sample_ids)
-#'                     
-#'   PB_counts = compute_PB_counts(sce = sce,
-#'                                 EC_list = EC_list,
-#'                                 design =  design,
-#'                                 sample_col_name = "sample",
-#'                                 group_col_name = "group",
-#'                                 sce_cluster_name = "cell_type",
-#'                                 min_cells_per_cluster = 100, 
-#'                                 min_counts_per_gene_per_group = 20)
-#'   
-#'   # to reduce memory usage, we can remove the EC_list object:
-#'   rm(EC_list)
-#'   
-#'   set.seed(169612) 
-#'   results_EC = DifferentialRegulation(PB_counts)
-#'   
-#'   names(results_EC)
-#'   
-#'   # We visualize differential results:
-#'   head(results_EC$Differential_results)
-#' }
+#' head(results$Differential_results)
 #' 
 #' # plot top (i.e., most significant) result:
 #' # plot USA proportions:
-#' plot_pi(results_USA,
+#' plot_pi(results,
 #'         type = "USA",
-#'         gene_id = results_USA$Differential_results$Gene_id[1],
-#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
+#'         gene_id = results$Differential_results$Gene_id[1],
+#'         cluster_id = results$Differential_results$Cluster_id[1])
 #' 
 #' # plot US proportions:
-#' plot_pi(results_USA,
+#' plot_pi(results,
 #'         type = "US",
-#'         gene_id = results_USA$Differential_results$Gene_id[1],
-#'         cluster_id = results_USA$Differential_results$Cluster_id[1])
+#'         gene_id = results$Differential_results$Gene_id[1],
+#'         cluster_id = results$Differential_results$Cluster_id[1])
 #'
-#' @author Simone Tiberi \email{simone.tiberi@uzh.ch}
+#' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
-#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{plot_pi}}, 
+#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, code{\link{compute_PB_counts}}, \code{\link{plot_pi}}
 #' 
 #' @export
 DifferentialRegulation = function(PB_counts,
-                                  EC = TRUE,
                                   n_cores = NULL, # by default = n_clusters
                                   N_MCMC = 2000,
-                                  burn_in = 500){
+                                  burn_in = 500,
+                                  undersampling_int = 10,
+                                  c_prop = 0.2){
+  if( (undersampling_int < 1) | (undersampling_int > 10) ){
+    message("'undersampling_int' must be an integer between 1 and 10 (included)")
+    return(NULL)
+  }
+  if( round(undersampling_int) != undersampling_int ){
+    message("'undersampling_int' must be an integer")
+    return(NULL)
+  }
+  
+  
   if(N_MCMC < 2*10^3){
     message("'N_MCMC' must be at least 2*10^3")
     return(NULL)
@@ -177,16 +168,11 @@ DifferentialRegulation = function(PB_counts,
   n_cell_types = PB_counts[[10]]
   levels_groups = PB_counts[[11]]
   
-  if(!EC){
-    message("'EC' was set to 'FALSE': estimated counts will be used to perform differential testing (faster, but marginally less accurate).")
-    message("We recommend using equivalence classes counts (slower, but marginally more accurate).")
-  }else{
-    min_counts_ECs = PB_counts[[12]]
-    list_EC_gene_id_original = PB_counts[[13]]
-    list_EC_USA_id_original = PB_counts[[14]]
-    genes = PB_counts[[15]]
-    n_genes = PB_counts[[16]]
-  }
+  min_counts_ECs = PB_counts[[12]]
+  list_EC_gene_id_original = PB_counts[[13]]
+  list_EC_USA_id_original = PB_counts[[14]]
+  genes = PB_counts[[15]]
+  n_genes = PB_counts[[16]]
   
   rm(PB_counts)
   
@@ -210,49 +196,37 @@ DifferentialRegulation = function(PB_counts,
     cores_equal_clusters = TRUE
   }
   
+  # if at least 2 clusters:
   cluster = makeCluster(n_cores, setup_strategy = "sequential")
   registerDoParallel(cluster, n_cores)
+  # pass libPath to workers:
+  clusterCall(cluster, function(x) .libPaths(x), .libPaths())
   
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # run MCMC in parallel:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  if(EC){
-    RESULTS = MCMC_ECs(PB_data_prepared,
-                       min_counts_per_gene_per_group,
-                       N_MCMC,
-                       burn_in,
-                       min_counts_ECs,
-                       n_samples,
-                       n_samples_per_group,
-                       numeric_groups,
-                       genes,
-                       cluster,
-                       cluster_ids_kept,
-                       sample_ids_per_group,
-                       n_groups,
-                       gene_ids_sce,
-                       n_genes,
-                       list_EC_gene_id_original,
-                       list_EC_USA_id_original,
-                       cores_equal_clusters)
-  }else{
-    RESULTS = MCMC_USA(PB_data_prepared,
-                       min_counts_per_gene_per_group,
-                       N_MCMC,
-                       burn_in,
-                       n_samples,
-                       n_samples_per_group,
-                       numeric_groups,
-                       cluster,
-                       cluster_ids_kept,
-                       sample_ids_per_group,
-                       n_groups,
-                       gene_ids_sce,
-                       cores_equal_clusters)
-  }
+  RESULTS = MCMC_ECs(PB_data_prepared,
+                     min_counts_per_gene_per_group,
+                     N_MCMC,
+                     burn_in,
+                     min_counts_ECs,
+                     n_samples,
+                     n_samples_per_group,
+                     numeric_groups,
+                     genes,
+                     cluster,
+                     cluster_ids_kept,
+                     sample_ids_per_group,
+                     n_groups,
+                     gene_ids_sce,
+                     n_genes,
+                     list_EC_gene_id_original,
+                     list_EC_USA_id_original,
+                     cores_equal_clusters,
+                     undersampling_int,
+                     n_cores,
+                     c_prop)
   
-  #Error in { : task 5 failed - "object 'PB_data_prepared' not found"
-    
   stopCluster(cluster) 
   stopImplicitCluster()
   
@@ -289,9 +263,9 @@ DifferentialRegulation = function(PB_counts,
     RES = RES[ ord, ]
   }
   
-  res = list( Differential_results = RES[, seq_len(5)],
-              US_results = RES[, seq_len(13)],
-              USA_results = RES[, c(seq.int(1,5,by = 1),seq.int(14,25,by = 1))],
+  res = list( Differential_results = RES[, seq_len(6)],
+              US_results = RES[, seq_len(14)],
+              USA_results = RES[, c(seq.int(1,6,by = 1),seq.int(15,26,by = 1))],
               Convergence_results = Convergence_results)
   
   res

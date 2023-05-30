@@ -1,29 +1,41 @@
 Package: DifferentialRegulation
 Type: Package
 Title: Differentially regulated genes from scRNA-seq data
-Version: 1.0.7
-Description: DifferentialRegulation is a method for detecting differentially regulated genes between two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples),
-  by targeting differences in the balance of spliced and unspliced mRNA abundances, obtained from single-cell RNA-sequencing (scRNA-seq) data.
-  DifferentialRegulation accounts for the sample-to-sample variability, and embeds multiple samples in a Bayesian hierarchical model.
-  In particular, when reads are compatible with multiple genes or multiple splicing versions of a gene (unspliced spliced or ambiguous), 
-  the method allocates these multi-mapping reads to the gene of origin and their splicing version.
+Version: 1.98.0
+Description: DifferentialRegulation is a method for detecting differentially regulated genes between 
+  two groups of samples (e.g., healthy vs. disease, or treated vs. untreated samples),
+  by targeting differences in the balance of spliced and unspliced mRNA abundances, 
+  obtained from single-cell RNA-sequencing (scRNA-seq) data.
+  From a mathematical point of view, DifferentialRegulation accounts for the sample-to-sample variability, 
+  and embeds multiple samples in a Bayesian hierarchical model.
+  Furthermore, our method also deals with two major sources of mapping uncertainty:
+  i) 'ambiguous' reads, compatible with both spliced and unspliced versions of a gene,
+  and ii) reads mapping to multiple genes.
+  In particular, ambiguous reads are treated separately from spliced and unsplced reads, 
+  while reads that are compatible with multiple genes are allocated to the gene of origin.
   Parameters are inferred via Markov chain Monte Carlo (MCMC) techniques (Metropolis-within-Gibbs).
 Authors@R: c(person(given = "Simone",
            family = "Tiberi",
            role = c("aut", "cre"),
-           email = "simone.tiberi@uzh.ch",
-           comment = c(ORCID = "0000-0002-3054-9964")))
+           email = "simone.tiberi@unibo.it",
+           comment = c(ORCID = "0000-0002-3054-9964")),
+           person(given = "Charlotte", family = "Soneson", 
+           role = c("aut"),
+           email = "charlottesoneson@gmail.com",
+           comment = c(ORCID = "0000-0003-3833-2169")))
 biocViews: DifferentialSplicing, Bayesian, Genetics,
   RNASeq, Sequencing, DifferentialExpression, GeneExpression, MultipleComparison,
   Software, Transcription, StatisticalMethod, Visualization, SingleCell, GeneTarget
 License: GPL-3
-Depends: R (>= 4.2.0)
-Imports: methods, Rcpp, doRNG, MASS, data.table, doParallel, parallel, foreach, stats, BANDITS, Matrix, SingleCellExperiment, SummarizedExperiment, ggplot2
+Depends: R (>= 4.3.0)
+Imports: methods, Rcpp, doRNG, MASS, data.table, doParallel, parallel, foreach, stats, BANDITS, 
+  Matrix, SingleCellExperiment, SummarizedExperiment, ggplot2, tximport
 LinkingTo: Rcpp, RcppArmadillo
 Suggests: knitr, rmarkdown, testthat, BiocStyle
 SystemRequirements: C++11
 VignetteBuilder: knitr
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3
 ByteCompile: true
+Encoding: UTF-8
 URL: https://github.com/SimoneTiberi/DifferentialRegulation
 BugReports: https://github.com/SimoneTiberi/DifferentialRegulation/issues

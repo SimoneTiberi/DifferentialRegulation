@@ -573,5 +573,6 @@ print(i)
 }
 ```
 
-
-
+# salmon folder
+The scripts to generate this simulated data can be found [here](https://github.com/csoneson/differential_regulation_simulation).
+The full simulation is used in the mauscript, while here (for space reasons) we used the smaller subset simulation, bases on chromosome 22 only.

@@ -6,7 +6,7 @@
 \usage{
 compute_PB_counts(
   sce,
-  EC_list = NULL,
+  EC_list,
   design,
   sample_col_name = "sample",
   group_col_name = "group",
@@ -38,7 +38,7 @@ Cell clusters with less than 'min_cells_per_cluster' cells will not be analyzed.
 \item{min_counts_per_gene_per_group}{minimum number of counts per gene, in each cell, across all samples of every group.
 In each cell cluster, only genes with at least 'min_counts_per_gene_per_group' counts in both groups of samples will be analyzed.}
 
-\item{min_counts_ECs}{equivalence classes (ECs) filter (NB: only used when 'EC_list' is provided)
+\item{min_counts_ECs}{equivalence classes (ECs) filter.
 'min_counts_ECs' indicates the minimum number of counts (across all cells in a cell cluster) for each equivalence class;
 by default all ECs are considered (min_counts_ECs = 0).
 ECs with less or equal than 'min_counts_ECs' will be discarded.
@@ -86,8 +86,19 @@ DF_cell_types = read.csv(path_to_DF, sep = "\t", header = TRUE)
 matches = match(colnames(sce), DF_cell_types$cell_id)
 sce$cell_type = DF_cell_types$cell_type[matches]
 
+# set paths to EC counts and ECs:
+path_to_EC_counts = file.path(base_dir,"/alevin/geqc_counts.mtx")
+path_to_EC = file.path(base_dir,"/alevin/gene_eqclass.txt.gz")
+
+# load EC counts:
+EC_list = load_EC(path_to_EC_counts,
+                  path_to_EC,
+                  path_to_cell_id,
+                  path_to_gene_id,
+                  sample_ids)
+
 PB_counts = compute_PB_counts(sce = sce,
-                              EC_list = NULL,
+                              EC_list = EC_list,
                               design =  design,
                               sample_col_name = "sample",
                               group_col_name = "group",
@@ -97,8 +108,8 @@ PB_counts = compute_PB_counts(sce = sce,
 
 }
 \seealso{
-\code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{plot_pi}},
+\code{\link{load_EC}}, \code{\link{load_USA}}, \code{\link{DifferentialRegulation}}, \code{\link{plot_pi}}
 }
 \author{
-Simone Tiberi \email{simone.tiberi@uzh.ch}
+Simone Tiberi \email{simone.tiberi@unibo.it}
 }
