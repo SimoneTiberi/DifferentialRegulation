@@ -18,7 +18,10 @@ MCMC_ECs = function(PB_data_prepared,
                     cores_equal_clusters,
                     undersampling_int,
                     n_cores,
-                    c_prop){
+                    levels_groups,
+                    traceplot){
+  c_prop = 0.2 # proportionality constant of the ARW
+  
   # compute overall counts per cluster -> use this to rank highly abundant clusters first (likely more computationally intensive).
   overall_counts = vapply(PB_data_prepared, function(x){
     sum( unlist(x[[1]]) )
@@ -346,7 +349,7 @@ MCMC_ECs = function(PB_data_prepared,
                              sample_SU_TF = ifelse(seq_len(n_genes_non_zero) %in% keep_genes_id, 1, 0)
                              
                              X_list = lapply(seq_len(n_samples), matrix, data = 1, nrow = 2, ncol= 2)
-
+                             
                              res = .Call(`_DifferentialRegulation_Rcpp_MCMC`,
                                          n_samples, # N samples
                                          n_genes_non_zero, # N genes_non_zero
@@ -498,6 +501,18 @@ MCMC_ECs = function(PB_data_prepared,
                              MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
                              MCMC_bar_pi_3[[2]] = MCMC_bar_pi_3[[2]][sel,]
                              
+                             if(traceplot){
+                               # store results of MCMC, before swapping:
+                               MCMC_U = list()
+                               MCMC_U[[1]] = MCMC_bar_pi_2[[1]] + 0.5 * MCMC_bar_pi_3[[1]] 
+                               MCMC_U[[2]] = MCMC_bar_pi_2[[2]] + 0.5 * MCMC_bar_pi_3[[2]] 
+                               names(MCMC_U) = levels_groups[1:2]
+                               MCMC_U$Gene_id = sel_genes
+                               #Cluster_id = rep(cluster_ids_kept[cl], length(sel_genes))
+                             }else{
+                               MCMC_U = NULL
+                             }
+                             
                              # swap A positions to decrease correlations:
                              R = length(sel)
                              swap = sample.int(R, R) # n indicates the nr of elements of the chain (exluded burn-in)
@@ -549,7 +564,8 @@ MCMC_ECs = function(PB_data_prepared,
                              DF_convergence = NULL
                            }
                            return(list(RES,
-                                       DF_convergence))
+                                       DF_convergence,
+                                       MCMC_U))
                          }
   
   # merge results from multiple clusters, only if available
@@ -560,6 +576,9 @@ MCMC_ECs = function(PB_data_prepared,
     convergence_results = lapply(p_values_ALL, function(X){ # 2nd element contains convergence results
       X[[2]]
     })
+    MCMC_U = lapply(p_values_ALL, function(X){ # 3rd element contains traceplots
+      X[[3]]
+    })
     
     rm(p_values_ALL)
     
@@ -568,9 +587,12 @@ MCMC_ECs = function(PB_data_prepared,
   }else{
     RES = p_values_ALL[[1]][[1]]
     convergence_results = p_values_ALL[[1]][[2]]
+    MCMC_U = p_values_ALL[[1]][[3]]
     
     rm(p_values_ALL)
   }
+  # names of MCMC_U reflect the cell cluster:
+  names(MCMC_U) = cluster_ids_kept[order]
   
   # CHECK if ALL NULL (if all clusters return null):
   if(!is.null(RES)){
@@ -579,5 +601,5 @@ MCMC_ECs = function(PB_data_prepared,
   }
   
   # create a final table of results, like in distinct.
-  list(RES, convergence_results)
+  list(RES, convergence_results, MCMC_U)
 }

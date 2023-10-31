@@ -48,6 +48,10 @@
 #' @importFrom ggplot2 xlab
 #' @importFrom ggplot2 ylab
 #' @importFrom ggplot2 geom_point
+#' @importFrom ggplot2 geom_line
+#' @importFrom ggplot2 ylim
+#' @importFrom ggplot2 element_blank
 #' @importFrom ggplot2 geom_errorbar
+#' @importFrom gridExtra grid.arrange
 #' @importFrom tximport tximport
 NULL

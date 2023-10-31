@@ -7,7 +7,8 @@
 plot_bulk_pi(results, transcript_id, CI = TRUE, CI_level = 0.95)
 }
 \arguments{
-\item{results}{a \code{list} of 2 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.}
+\item{results}{a \code{list} of \code{\linkS4class{data.frame}} objects, 
+computed via \code{\link{DifferentialRegulation}}.}
 
 \item{transcript_id}{a character, indicating the transcript to plot.}
 
@@ -30,7 +31,7 @@ help(DifferentialRegulation_bulk)
 
 }
 \seealso{
-\code{\link{DifferentialRegulation}}
+\code{\link{DifferentialRegulation_bulk}}
 }
 \author{
 Simone Tiberi \email{simone.tiberi@unibo.it}

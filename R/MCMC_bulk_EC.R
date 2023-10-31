@@ -13,7 +13,9 @@ MCMC_bulk_EC = function(SE,
                         burn_in,
                         n_cores,
                         undersampling_int,
-                        c_prop){
+                        traceplot){
+  c_prop = 0.3 # proportionality constant of the ARW
+  
   counts = EC_data[[1]]
   list_EC_tr_id = EC_data[[2]]
   list_EC_US_id = EC_data[[3]]
@@ -465,6 +467,13 @@ MCMC_bulk_EC = function(SE,
   MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
   MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
   
+  if(traceplot){
+    # store results of MCMC, before swapping:
+    MCMC_U = MCMC_bar_pi_2
+    names(MCMC_U) = levels_groups[1:2]
+    MCMC_U$Transcript_id = tr_ids_keep
+  }
+  
   # swap A positions to decrease correlations:
   R = length(sel)
   swap = sample.int(R, R) # n indicates the nr of elements of the chain (exluded burn-in)
@@ -512,8 +521,14 @@ MCMC_bulk_EC = function(SE,
     RES = RES[ ord, ]
   }
   
-  res = list( Differential_results = RES[, seq_len(12)],
-              Convergence_results = DF_convergence)
+  if(traceplot){
+    res = list( Differential_results = RES[, seq_len(12)],
+                Convergence_results = DF_convergence,
+                MCMC_U = MCMC_U)
+  }else{
+    res = list( Differential_results = RES[, seq_len(12)],
+                Convergence_results = DF_convergence)
+  }
   
   res
 }

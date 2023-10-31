@@ -225,9 +225,10 @@ rm(EC_list)
 We perform differential testing:
 ```{r EC-test}
 # EC-based test:
-set.seed(169612)
+set.seed(1609612)
 results = DifferentialRegulation(PB_counts,
-                                 n_cores = 2)
+                                 n_cores = 2,
+                                 traceplot = TRUE)
 ```
 
 ## Visualizing results
@@ -289,6 +290,12 @@ plot_pi(results,
         type = "US",
         gene_id = results$Differential_results$Gene_id[1],
         cluster_id = results$Differential_results$Cluster_id[1])
+
+plot_pi(results,
+        type = "US",
+        gene_id = results$Differential_results$Gene_id[2],
+        cluster_id = results$Differential_results$Cluster_id[2])
+
 ```
 
 ```{r plot_pi_USA}
@@ -296,8 +303,24 @@ plot_pi(results,
         type = "USA",
         gene_id = results$Differential_results$Gene_id[1],
         cluster_id = results$Differential_results$Cluster_id[1])
+
+plot_pi(results,
+        type = "USA",
+        gene_id = results$Differential_results$Gene_id[2],
+        cluster_id = results$Differential_results$Cluster_id[2])
 ```
 
+If `traceplot = TRUE` in `DifferentialRegulation`, can also plot the posterior chains of $\pi_U$ (i.e., the group-level relative abundances of U) in both groups.
+Note that, to decrease memory requirements, the burn-in is not returned.
+```{r plot_pi-traceplot}
+plot_traceplot(results,
+               gene_id = results$Differential_results$Gene_id[1],
+               cluster_id = results$Differential_results$Cluster_id[1])
+
+plot_traceplot(results,
+               gene_id = results$Differential_results$Gene_id[2],
+               cluster_id = results$Differential_results$Cluster_id[2])
+```
 
 
 # Bulk RNA-seq pipeline
@@ -380,14 +403,16 @@ design = data.frame(sample = sample_ids,
 design
 ```
 
-We perform differential testing:
+We perform differential testing.
+As above, if `traceplot = TRUE` the function also returns the posterior chains of $\pi_U$ (i.e., the group-level relative abundances of U) in both groups (`MCMC_U` object), which can then be visualized via `plot_bulk_traceplot` function.
 ```{r EC-test-bulk}
 # EC-based test:
-set.seed(169612)
+set.seed(1609612)
 results = DifferentialRegulation_bulk(SE = SE, 
                                       EC_list = EC_list,
                                       design = design,
-                                      n_cores = 2)
+                                      n_cores = 2,
+                                      traceplot = TRUE)
 ```
 
 ## Visualizing results
@@ -430,7 +455,21 @@ If `CI = TRUE` (default option), for each estimate, we can also add the respecti
 ```{r plot_pi-bulk}
 plot_bulk_pi(results,
              transcript_id = results$Differential_results$Transcript_id[1])
+
+plot_bulk_pi(results,
+             transcript_id = results$Differential_results$Transcript_id[2])
 ```
+
+If `traceplot = TRUE` in `DifferentialRegulation_bulk`, can also plot the posterior chains of $\pi_U$ (i.e., the group-level relative abundances of U) in both groups.
+Note that, to decrease memory requirements, the burn-in is not returned.
+```{r plot_pi-bulk-traceplot}
+plot_bulk_traceplot(results,
+                    transcript_id = results$Differential_results$Transcript_id[1])
+
+plot_bulk_traceplot(results,
+                    transcript_id = results$Differential_results$Transcript_id[2])
+```
+
 
 # Session info
 ```{r sessionInfo}

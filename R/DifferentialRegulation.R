@@ -24,7 +24,10 @@
 #' every `undersampling_int` iterations.
 #' Increasing `undersampling_int` will decrease the runtime, but may marginally affect performance.
 #' In our benchmarks, no differences in performance were observed for values up to 10.
-#' @param c_prop temporary parameter; do NOT edit.
+#' @param traceplot a logical value indicating whether to return the posterior chain
+#' of "pi_U", for both groups (i.e., the group-level relative abundance of unspliced reads).
+#' If TRUE, the posterior chains are stored in 'MCMC_U' object,
+#' and can be plotted via 'plot_traceplot' function.
 #' 
 #' @return A \code{list} of 4 \code{data.frame} objects.
 #' 'Differential_results' contains results from differential testing only;
@@ -102,9 +105,10 @@
 #' # to reduce memory usage, we can remove the EC_list object:
 #' rm(EC_list)
 #'   
-#' set.seed(169612) 
+#' set.seed(1609612) 
 #' results = DifferentialRegulation(PB_counts,
-#'                                  n_cores = 2)
+#'                                  n_cores = 2,
+#'                                  traceplot = TRUE)
 #'   
 #' names(results)
 #'   
@@ -123,10 +127,15 @@
 #'         type = "US",
 #'         gene_id = results$Differential_results$Gene_id[1],
 #'         cluster_id = results$Differential_results$Cluster_id[1])
+#'        
+#' # plot the corresponding traceplot:
+#' plot_traceplot(results,
+#'                gene_id = results$Differential_results$Gene_id[1],
+#'                cluster_id = results$Differential_results$Cluster_id[1])
 #'
 #' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
-#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, code{\link{compute_PB_counts}}, \code{\link{plot_pi}}
+#' @seealso \code{\link{load_EC}}, \code{\link{load_USA}}, code{\link{compute_PB_counts}}, \code{\link{plot_pi}}, \code{\link{plot_traceplot}}
 #' 
 #' @export
 DifferentialRegulation = function(PB_counts,
@@ -134,7 +143,7 @@ DifferentialRegulation = function(PB_counts,
                                   N_MCMC = 2000,
                                   burn_in = 500,
                                   undersampling_int = 10,
-                                  c_prop = 0.2){
+                                  traceplot = FALSE){
   if( (undersampling_int < 1) | (undersampling_int > 10) ){
     message("'undersampling_int' must be an integer between 1 and 10 (included)")
     return(NULL)
@@ -143,7 +152,6 @@ DifferentialRegulation = function(PB_counts,
     message("'undersampling_int' must be an integer")
     return(NULL)
   }
-  
   
   if(N_MCMC < 2*10^3){
     message("'N_MCMC' must be at least 2*10^3")
@@ -225,7 +233,8 @@ DifferentialRegulation = function(PB_counts,
                      cores_equal_clusters,
                      undersampling_int,
                      n_cores,
-                     c_prop)
+                     levels_groups,
+                     traceplot)
   
   stopCluster(cluster) 
   stopImplicitCluster()
@@ -233,6 +242,7 @@ DifferentialRegulation = function(PB_counts,
   # separate
   RES = RESULTS[[1]]
   Convergence_results = RESULTS[[2]]
+  MCMC_U = RESULTS[[3]]
   rm(RESULTS)
   
   # CHECK if ALL NULL (if all clusters return null):
@@ -263,10 +273,19 @@ DifferentialRegulation = function(PB_counts,
     RES = RES[ ord, ]
   }
   
-  res = list( Differential_results = RES[, seq_len(6)],
-              US_results = RES[, seq_len(14)],
-              USA_results = RES[, c(seq.int(1,6,by = 1),seq.int(15,26,by = 1))],
-              Convergence_results = Convergence_results)
+  if(traceplot){
+    res = list( Differential_results = RES[, seq_len(6)],
+                US_results = RES[, seq_len(14)],
+                USA_results = RES[, c(seq.int(1,6,by = 1),seq.int(15,26,by = 1))],
+                Convergence_results = Convergence_results,
+                MCMC_U = MCMC_U)
+  }else{
+    res = list( Differential_results = RES[, seq_len(6)],
+                US_results = RES[, seq_len(14)],
+                USA_results = RES[, c(seq.int(1,6,by = 1),seq.int(15,26,by = 1))],
+                Convergence_results = Convergence_results)
+    
+  }
   
   res
 }

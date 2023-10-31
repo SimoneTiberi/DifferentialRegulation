@@ -7,7 +7,7 @@
 plot_pi(results, gene_id, cluster_id, type = "USA", CI = TRUE, CI_level = 0.95)
 }
 \arguments{
-\item{results}{a \code{list} of 4 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.}
+\item{results}{a \code{list} of \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.}
 
 \item{gene_id}{a character, indicating the gene to plot.}
 

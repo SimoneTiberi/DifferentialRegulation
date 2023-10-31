@@ -4,7 +4,8 @@
 #' If 'CI' is TRUE, a profile Wald type confidence interval will also be added;
 #' the level of the confidence interval is specified by 'CI_level'.
 #' 
-#' @param results a \code{list} of 2 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.
+#' @param results a \code{list} of \code{\linkS4class{data.frame}} objects, 
+#' computed via \code{\link{DifferentialRegulation}}.
 #' @param transcript_id a character, indicating the transcript to plot.
 #' @param CI a logical ('TRUE' by default), indicating whether to plot a 
 #' profile Wald type confidence interval around the estimated proportions.
@@ -17,20 +18,21 @@
 #' 
 #' @author Simone Tiberi \email{simone.tiberi@unibo.it}
 #' 
-#' @seealso \code{\link{DifferentialRegulation}}
+#' @seealso \code{\link{DifferentialRegulation_bulk}}
 #' 
 #' @export
 plot_bulk_pi = function(results,
                         transcript_id,
                         CI = TRUE,
                         CI_level = 0.95){
-  if( (!is.list(results)) | (length(results) != 2) ){
-    message("'results' must be a 'list' of 2 objects, as created via 'DifferentialRegulation_bulk' function.")
+  if( (!is.list(results)) ){
+    message("'results' must be a 'list' created via 'DifferentialRegulation_bulk' function.")
     return(NULL)
   }
+  
   if(!("Differential_results" %in% names(results))){
     message("'names(results)' must include 'Differential_results'.")
-    message("'results' must be a 'list' of 2 objects, as created via 'DifferentialRegulation_bulk' function.")
+    message("'results' must be a 'list' created via 'DifferentialRegulation_bulk' function.")
     return(NULL)
   }
   

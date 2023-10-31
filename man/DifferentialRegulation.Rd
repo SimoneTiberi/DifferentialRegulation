@@ -10,7 +10,7 @@ DifferentialRegulation(
   N_MCMC = 2000,
   burn_in = 500,
   undersampling_int = 10,
-  c_prop = 0.2
+  traceplot = FALSE
 )
 }
 \arguments{
@@ -38,7 +38,10 @@ every `undersampling_int` iterations.
 Increasing `undersampling_int` will decrease the runtime, but may marginally affect performance.
 In our benchmarks, no differences in performance were observed for values up to 10.}
 
-\item{c_prop}{temporary parameter; do NOT edit.}
+\item{traceplot}{a logical value indicating whether to return the posterior chain
+of "pi_U", for both groups (i.e., the group-level relative abundance of unspliced reads).
+If TRUE, the posterior chains are stored in 'MCMC_U' object,
+and can be plotted via 'plot_traceplot' function.}
 }
 \value{
 A \code{list} of 4 \code{data.frame} objects.
@@ -123,9 +126,10 @@ PB_counts = compute_PB_counts(sce = sce,
 # to reduce memory usage, we can remove the EC_list object:
 rm(EC_list)
   
-set.seed(169612) 
+set.seed(1609612) 
 results = DifferentialRegulation(PB_counts,
-                                 n_cores = 2)
+                                 n_cores = 2,
+                                 traceplot = TRUE)
   
 names(results)
   
@@ -144,10 +148,15 @@ plot_pi(results,
         type = "US",
         gene_id = results$Differential_results$Gene_id[1],
         cluster_id = results$Differential_results$Cluster_id[1])
+       
+# plot the corresponding traceplot:
+plot_traceplot(results,
+               gene_id = results$Differential_results$Gene_id[1],
+               cluster_id = results$Differential_results$Cluster_id[1])
 
 }
 \seealso{
-\code{\link{load_EC}}, \code{\link{load_USA}}, code{\link{compute_PB_counts}}, \code{\link{plot_pi}}
+\code{\link{load_EC}}, \code{\link{load_USA}}, code{\link{compute_PB_counts}}, \code{\link{plot_pi}}, \code{\link{plot_traceplot}}
 }
 \author{
 Simone Tiberi \email{simone.tiberi@unibo.it}

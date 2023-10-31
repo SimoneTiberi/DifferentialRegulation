@@ -5,7 +5,7 @@
 #' If 'CI' is TRUE, a profile Wald type confidence interval will also be added;
 #' the level of the confidence interval is specified by 'CI_level'.
 #' 
-#' @param results a \code{list} of 4 \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.
+#' @param results a \code{list} of \code{\linkS4class{data.frame}} objects, computed via \code{\link{DifferentialRegulation}}.
 #' @param gene_id a character, indicating the gene to plot.
 #' @param cluster_id a character, indicating the cell cluster to plot.
 #' @param type a character (either 'SU' or 'SUA').
@@ -35,13 +35,13 @@ plot_pi = function(results,
                    type = "USA",
                    CI = TRUE,
                    CI_level = 0.95){
-  if( (!is.list(results)) | (length(results) != 4) ){
-    message("'results' must be a 'list' of 4 objects, as created via 'DifferentialRegulation' function.")
+  if( !is.list(results) ){
+    message("'results' must be a 'list' created via 'DifferentialRegulation' function.")
     return(NULL)
   }
   if(!all(c("US_results", "USA_results") %in% names(results))){
     message("'names(results)' must include both '' and 'USA_results'.")
-    message("'results' must be a 'list' of 4 objects, as created via 'DifferentialRegulation' function.")
+    message("'results' must be a 'list' created via 'DifferentialRegulation' function.")
     return(NULL)
   }
   

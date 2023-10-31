@@ -16,7 +16,7 @@ DifferentialRegulation_bulk(
   min_counts_ECs = 0,
   n_cores = 1,
   undersampling_int = 10,
-  c_prop = 0.3
+  traceplot = FALSE
 )
 }
 \arguments{
@@ -62,16 +62,16 @@ every `undersampling_int` iterations.
 Increasing `undersampling_int` will decrease the runtime, but may marginally affect performance.
 In our benchmarks, no differences in performance were observed for values up to 10.}
 
-\item{c_prop}{temporary parameter; do NOT edit.}
+\item{traceplot}{a logical value indicating whether to return the posterior chain
+of "pi_U", for both groups (i.e., the group-level relative abundance of unspliced reads).
+If TRUE, the posterior chains are stored in 'MCMC_U' object,
+and can be plotted via 'plot_bulk_traceplot' function.}
 }
 \value{
-A \code{list} of 4 \code{data.frame} objects.
+A \code{list} of \code{data.frame} objects.
 'Differential_results' contains results from differential testing only;
-'US_results' has results for the proportion of Spliced and Unspliced counts 
-(Ambiguous counts are allocated 50:50 to Spliced and Unspliced);
-'USA_results' includes results for the proportion of Spliced, Unspliced and Ambiguous counts 
-(Ambiguous counts are reported separately from Spliced and Unspliced counts);
-'Convergence_results' contains information about convergence of posterior chains.
+'Convergence_results' contains information about convergence of posterior chains; 
+'MCMC_U' (only if traceplot is TRUE) contains the posterior chains for 'pi_U' in both groups.
 Columns 'Gene_id' and 'Cluster_id' contain the gene and cell-cluster name, 
 while 'p_val', 'p_adj.loc' and 'p_adj.glb' report the raw p-values, locally and globally adjusted p-values, 
 via Benjamini and Hochberg (BH) correction.
@@ -119,11 +119,12 @@ design = data.frame(sample = sample_ids,
                     group = group_names)
 design
 
-set.seed(169612) 
+set.seed(1609612) 
 results = DifferentialRegulation_bulk(SE = SE, 
                                       EC_list = EC_list,
                                       design = design, 
-                                      n_cores = 2)
+                                      n_cores = 2,
+                                      traceplot = TRUE)
 
 names(results)
   
@@ -135,9 +136,13 @@ head(results$Differential_results)
 plot_bulk_pi(results,
              transcript_id = results$Differential_results$Transcript_id[1])
 
+# plot the corresponding traceplot:
+plot_bulk_traceplot(results,
+                    transcript_id = results$Differential_results$Transcript_id[1])
+
 }
 \seealso{
-\code{\link{load_bulk_EC}}, \code{\link{load_bulk_US}}, \code{\link{plot_pi}}
+\code{\link{load_bulk_EC}}, \code{\link{load_bulk_US}}, \code{\link{plot_pi}}, \code{\link{plot_bulk_traceplot}}
 }
 \author{
 Simone Tiberi \email{simone.tiberi@unibo.it}
