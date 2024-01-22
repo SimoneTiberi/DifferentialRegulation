@@ -311,6 +311,7 @@ plot_pi(results,
 ```
 
 If `traceplot = TRUE` in `DifferentialRegulation`, can also plot the posterior chains of $\pi_U$ (i.e., the group-level relative abundances of U) in both groups.
+The vertical dashed grey line indicates the burn-in that was used (i.e., the iterations to the left side of the line were excluded).
 Note that, to decrease memory requirements, the burn-in is not returned.
 ```{r plot_pi-traceplot}
 plot_traceplot(results,
@@ -405,6 +406,7 @@ design
 
 We perform differential testing.
 As above, if `traceplot = TRUE` the function also returns the posterior chains of $\pi_U$ (i.e., the group-level relative abundances of U) in both groups (`MCMC_U` object), which can then be visualized via `plot_bulk_traceplot` function.
+Again, the vertical dashed grey line represents the burn-in.
 ```{r EC-test-bulk}
 # EC-based test:
 set.seed(1609612)

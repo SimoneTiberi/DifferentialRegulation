@@ -349,7 +349,7 @@ MCMC_bulk_EC = function(SE,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # check convergence:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+  convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
   rm(res)
   
   # set convergence (over-written below if it did not converge)
@@ -421,7 +421,7 @@ MCMC_bulk_EC = function(SE,
                 eff_len_U,
                 c_prop)
     
-    convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.01)
+    convergence = my_heidel_diag(res, R = N_MCMC, by. = 100, pvalue = 0.05)
     rm(res)
     
     if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
@@ -460,19 +460,19 @@ MCMC_bulk_EC = function(SE,
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
   # compute p-value:
   #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-  # discard burn-in
-  sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
-  MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][sel,]
-  MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][sel,]
-  MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
-  MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
-  
   if(traceplot){
     # store results of MCMC, before swapping:
     MCMC_U = MCMC_bar_pi_2
     names(MCMC_U) = levels_groups[1:2]
     MCMC_U$Transcript_id = tr_ids_keep
   }
+  
+  # discard burn-in
+  sel = seq.int(from = burn_in +1, to = N_MCMC, by = 1)
+  MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][sel,]
+  MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][sel,]
+  MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
+  MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
   
   # swap A positions to decrease correlations:
   R = length(sel)
@@ -516,7 +516,7 @@ MCMC_bulk_EC = function(SE,
   colnames(RES)[sel_B] = gsub("gr_B", levels_groups[2], names[sel_B] )
   
   # order results by significance (raw p-value)
-  ord = order(RES$p_val)
+  ord = order(RES[,4]) # 4-th column = Prob-gr_B-UP
   if(! ( any(is.na(ord)) | any(is.null(ord)) | any(is.nan(ord)) ) ){
     RES = RES[ ord, ]
   }

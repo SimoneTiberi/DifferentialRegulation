@@ -2,6 +2,8 @@
 #'
 #' \code{plot_bulk_traceplot} plots the traceplot of the posterior chain 
 #' of the proportion (i.e., pi) of unspliced (U) counts in each group.
+#' The vertical grey dashed line indicates the burn-in 
+#' (the iterations on the left side of the burn-in are discarded in posterior analyses).
 #' 
 #' @param results a \code{list} of \code{\linkS4class{data.frame}} objects, 
 #' computed via \code{\link{DifferentialRegulation}} (single-cell RNA-seq data), 
@@ -54,6 +56,9 @@ plot_bulk_traceplot = function(results,
                   pi_U_B = results$MCMC_U[[2]][,sel], 
                   MCMC_iterations = 1:n_iter)
   
+  # plot vertical line at burn-in
+  burn_in = results$Convergence_results$burn_in
+  
   # Plot the estimated average proportions of each groups:
   ggp1 = ggplot() +
     geom_line(data = DF, aes_string(x = "MCMC_iterations", y = "pi_U_A")) +
@@ -66,8 +71,11 @@ plot_bulk_traceplot = function(results,
           axis.title = element_text(size=14, face="bold"), 
           plot.title = element_text(size=16)) +
     ggtitle(paste("Transcript:", transcript_id, " - ", group_names[1])) +
-    ylab(expression(pi[U]))
-
+    ylab(expression(pi[U])) + 
+    geom_vline(xintercept = burn_in, linetype="dashed", 
+               colour = "darkgrey")
+  
+  
   ggp2 = ggplot() +
     geom_line(data = DF, aes_string(x = "MCMC_iterations", y = "pi_U_B")) +
     theme_bw() + 
@@ -78,7 +86,9 @@ plot_bulk_traceplot = function(results,
           plot.title = element_text(size=16)) +
     ggtitle(paste("Transcript:", transcript_id, " - ", group_names[2])) +
     xlab("MCMC iteration") +
-    ylab(expression(pi[U]))
+    ylab(expression(pi[U])) + 
+    geom_vline(xintercept = burn_in, linetype="dashed", 
+               colour = "darkgrey")
   
   grid.arrange(ggp1, ggp2, nrow = 2)
 }

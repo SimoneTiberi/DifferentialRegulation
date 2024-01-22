@@ -19,8 +19,10 @@ or \code{\link{DifferentialRegulation_bulk}} (bulk RNA-seq data).}
 A \code{gtable} object.
 }
 \description{
-\code{plot_bulk_traceplot} plots the traceplot of the posterior chain 
+\code{plot_traceplot} plots the traceplot of the posterior chain 
 of the proportion (i.e., pi) of unspliced (U) counts in each group.
+The vertical grey dashed line indicates the burn-in 
+(the iterations on the left side of the burn-in are discarded in posterior analyses).
 }
 \examples{
 # see the example of DifferentialRegulation function:

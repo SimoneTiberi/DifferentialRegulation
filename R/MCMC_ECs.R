@@ -379,7 +379,7 @@ MCMC_ECs = function(PB_data_prepared,
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # check convergence:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
+                             convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.05)
                              rm(res)
                              
                              # set convergence (over-written below if it did not converge)
@@ -452,7 +452,7 @@ MCMC_ECs = function(PB_data_prepared,
                                            sample_SU_TF,
                                            c_prop) # 2 = sd_prior_non_informative in case prior_TF = FALSE
                                
-                               convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.01)
+                               convergence = my_heidel_diag(res, R = N_MCMC_one_cl, by. = 100, pvalue = 0.05)
                                rm(res)
                                
                                if(convergence[1] == 0){ # if not converged for a 2nd time: return convergence error.
@@ -460,8 +460,8 @@ MCMC_ECs = function(PB_data_prepared,
                                  
                                  # create convergence DF:
                                  DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                             burn_in_one_cl = NA,
-                                                             N_MCMC_one_cl = N_MCMC_one_cl,
+                                                             burn_in = NA,
+                                                             N_MCMC = N_MCMC_one_cl,
                                                              first_chain = first,
                                                              second_chain = second)
                                  
@@ -485,22 +485,13 @@ MCMC_ECs = function(PB_data_prepared,
                              
                              # create convergence DF:
                              DF_convergence = data.frame(Cluster_id = cluster_ids_kept[cl],
-                                                         burn_in_one_cl = burn_in_one_cl,
-                                                         N_MCMC_one_cl = N_MCMC_one_cl,
+                                                         burn_in = burn_in_one_cl,
+                                                         N_MCMC = N_MCMC_one_cl,
                                                          first_chain = first,
                                                          second_chain = second)
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
                              # compute p-value:
                              #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-                             # discard burn-in
-                             sel = seq.int(from = burn_in_one_cl +1, to = N_MCMC_one_cl, by = 1)
-                             MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][sel,]
-                             MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][sel,]
-                             MCMC_bar_pi_3[[1]] = MCMC_bar_pi_3[[1]][sel,]
-                             MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
-                             MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
-                             MCMC_bar_pi_3[[2]] = MCMC_bar_pi_3[[2]][sel,]
-                             
                              if(traceplot){
                                # store results of MCMC, before swapping:
                                MCMC_U = list()
@@ -512,6 +503,15 @@ MCMC_ECs = function(PB_data_prepared,
                              }else{
                                MCMC_U = NULL
                              }
+                             
+                             # discard burn-in
+                             sel = seq.int(from = burn_in_one_cl +1, to = N_MCMC_one_cl, by = 1)
+                             MCMC_bar_pi_1[[1]] = MCMC_bar_pi_1[[1]][sel,]
+                             MCMC_bar_pi_2[[1]] = MCMC_bar_pi_2[[1]][sel,]
+                             MCMC_bar_pi_3[[1]] = MCMC_bar_pi_3[[1]][sel,]
+                             MCMC_bar_pi_1[[2]] = MCMC_bar_pi_1[[2]][sel,]
+                             MCMC_bar_pi_2[[2]] = MCMC_bar_pi_2[[2]][sel,]
+                             MCMC_bar_pi_3[[2]] = MCMC_bar_pi_3[[2]][sel,]
                              
                              # swap A positions to decrease correlations:
                              R = length(sel)

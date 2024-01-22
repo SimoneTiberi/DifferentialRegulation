@@ -1,0 +1,23 @@
+citHeader("To cite DifferentialRegulation in publications use:")
+
+citEntry(entry 	= "Article",
+  title        	= "DifferentialRegulation: a Bayesian hierarchical approach to identify differentially regulated genes",
+  author       	= personList(as.person("Simone Tiberi"),
+                    as.person("Joel Meili"),
+                    as.person("Peiying Cai"),
+                    as.person("Charlotte Soneson"),
+                    as.person("Dongze He"),
+                    as.person("Hirak Sarkar"),
+                    as.person("Alejandra Avalos-Pacheco"),
+                    as.person("Rob Patro"),
+                   as.person("Mark D. Robinson")),
+	eprint = "https://doi.org/10.1101/2023.08.17.553679",
+	journal = "bioRxiv",
+  year = "2023",
+  doi	= "10.1101/2023.08.17.553679",
+  url  = "https://doi.org/10.1101/2023.08.17.553679",
+  paste("Simone Tiberi, Joel Meili, Peiying Cai, Charlotte Soneson, Dongze He, Hirak Sarkar, Alejandra Avalos-Pacheco, Rob Patro, Mark D. Robinson (2023).",
+        "DifferentialRegulation: a Bayesian hierarchical approach to identify differentially regulated genes.",
+        "bioRxiv.",
+        "URL https://doi.org/10.1101/2023.08.17.553679")
+)

@@ -52,6 +52,7 @@
 #' @importFrom ggplot2 ylim
 #' @importFrom ggplot2 element_blank
 #' @importFrom ggplot2 geom_errorbar
+#' @importFrom ggplot2 geom_vline
 #' @importFrom gridExtra grid.arrange
 #' @importFrom tximport tximport
 NULL

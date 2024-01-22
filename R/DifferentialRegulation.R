@@ -268,7 +268,7 @@ DifferentialRegulation = function(PB_counts,
   colnames(RES)[sel_B] = gsub("gr_B", levels_groups[2], names[sel_B] )
   
   # order results by significance (raw p-value)
-  ord = order(RES$p_val)
+  ord = order(RES[,6])
   if(! ( any(is.na(ord)) | any(is.null(ord)) | any(is.nan(ord)) ) ){
     RES = RES[ ord, ]
   }
