@@ -6,12 +6,12 @@
 
 Check the vignettes for a description of the main conceptual and mathematical aspects, as well as usage guidelines.
 
-> Simone Tiberi, Joel Meili, Peiying Cai, Charlotte Soneson, Dongze He, Hirak Sarkar, Alejandra Avalos-Pacheco, Rob Patro, Mark D. Robinson (2023).
+> Simone Tiberi, Joel Meili, Peiying Cai, Charlotte Soneson, Dongze He, Hirak Sarkar, Alejandra Avalos-Pacheco, Rob Patro, Mark D. Robinson.
 >
 > DifferentialRegulation: a Bayesian hierarchical approach to identify differentially regulated genes.
 >
-> bioRxiv.
-> Available [here](https://doi.org/10.1101/2023.08.17.553679)
+> Biostatistics (2024).
+> Available [here](https://doi.org/10.1093/biostatistics/kxae017).
 
 
 ## Bioconductor installation 
